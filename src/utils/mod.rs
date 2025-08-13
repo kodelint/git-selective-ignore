@@ -17,6 +17,13 @@ pub fn install_hooks() -> Result<()> {
     Ok(())
 }
 
+pub fn uninstall_hooks() -> Result<()> {
+    let config_manager = get_config_manager()?;
+    hooks::uninstall_git_hooks(&config_manager.get_repo_root())?;
+    println!("✓ Uninstalled Git hooks");
+    Ok(())
+}
+
 // Helper function to create ConfigManager instance
 fn get_config_manager() -> Result<ConfigManager> {
     ConfigManager::new()
