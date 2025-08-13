@@ -100,6 +100,26 @@ impl ConfigManager {
         Ok(())
     }
 
+    pub fn list_patterns(&self) -> Result<()> {
+        let config = self.load_config()?;
+
+        if config.files.is_empty() {
+            println!("No ignore patterns configured.");
+            return Ok(());
+        }
+
+        for (file_path, patterns) in &config.files {
+            println!("\n📁 File: {file_path}");
+            for pattern in patterns {
+                println!(
+                    "  🔍 ID: {} | Type: {:?} | Pattern: {}",
+                    pattern.id, pattern.pattern_type, pattern.specification
+                );
+            }
+        }
+        Ok(())
+    }
+    
     pub fn get_repo_root(&self) -> &Path {
         &self.repo_root
     }
