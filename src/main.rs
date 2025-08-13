@@ -1,7 +1,7 @@
 use anyhow::{Result};
 use clap::{Parser, Subcommand};
 use crate::core::config::ConfigManager;
-use crate::utils::{install_hooks, uninstall_hooks};
+use crate::utils::{add_ignore_pattern, install_hooks, remove_ignore_pattern, uninstall_hooks};
 
 mod core;
 mod utils;
@@ -19,6 +19,23 @@ struct Cli {
 enum Commands {
     /// Initialize selective ignore for this repository
     Init,
+    /// Add a new ignore pattern for a file
+    Add {
+        /// File path relative to repository root
+        file_path: String,
+        /// Pattern type (line-regex, line-number, block-start-end)
+        #[arg(short, long, default_value = "line-regex")]
+        pattern_type: String,
+        /// Pattern specification
+        pattern: String,
+    },
+    /// Remove an ignore pattern
+    Remove {
+        /// File path
+        file_path: String,
+        /// Pattern ID to remove
+        pattern_id: String,
+    },
     /// Install git hooks for automatic processing
     InstallHooks,
     /// Uninstall git hooks
@@ -36,6 +53,15 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Init => utils::initialize_repository(),
+        Commands::Add {
+            file_path,
+            pattern_type,
+            pattern,
+        } => add_ignore_pattern(file_path, pattern_type, pattern),
+        Commands::Remove {
+            file_path,
+            pattern_id,
+        } => remove_ignore_pattern(file_path, pattern_id),
         Commands::InstallHooks => install_hooks(),
         Commands::UninstallHooks => uninstall_hooks(),
     }

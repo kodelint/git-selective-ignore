@@ -4,6 +4,8 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::builders::patterns::IgnorePattern;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GlobalSettings {
     pub backup_strategy: BackupStrategy,
@@ -62,6 +64,39 @@ impl ConfigManager {
 
         let default_config = SelectiveIgnoreConfig::default();
         self.save_config(&default_config)?;
+        Ok(())
+    }
+
+    pub fn add_pattern(
+        &mut self,
+        file_path: String,
+        pattern_type: String,
+        pattern_spec: String,
+    ) -> Result<()> {
+        let mut config = self.load_config()?;
+        let ignore_pattern = IgnorePattern::new(pattern_type, pattern_spec)?;
+
+        config
+            .files
+            .entry(file_path)
+            .or_insert_with(Vec::new)
+            .push(ignore_pattern);
+
+        self.save_config(&config)?;
+        Ok(())
+    }
+
+    pub fn remove_pattern(&mut self, file_path: String, pattern_id: String) -> Result<()> {
+        let mut config = self.load_config()?;
+
+        if let Some(patterns) = config.files.get_mut(&file_path) {
+            patterns.retain(|p| p.id != pattern_id);
+            if patterns.is_empty() {
+                config.files.remove(&file_path);
+            }
+        }
+
+        self.save_config(&config)?;
         Ok(())
     }
 
