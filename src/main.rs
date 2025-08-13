@@ -1,7 +1,7 @@
 use anyhow::{Result};
 use clap::{Parser, Subcommand};
 use crate::core::config::ConfigManager;
-use crate::utils::{add_ignore_pattern, install_hooks, remove_ignore_pattern, uninstall_hooks};
+use crate::utils::{add_ignore_pattern, install_hooks, list_patterns, remove_ignore_pattern, uninstall_hooks};
 
 mod core;
 mod utils;
@@ -36,6 +36,8 @@ enum Commands {
         /// Pattern ID to remove
         pattern_id: String,
     },
+    /// List all configured ignore patterns
+    List,
     /// Install git hooks for automatic processing
     InstallHooks,
     /// Uninstall git hooks
@@ -62,6 +64,7 @@ fn main() -> Result<()> {
             file_path,
             pattern_id,
         } => remove_ignore_pattern(file_path, pattern_id),
+        Commands::List => list_patterns(),
         Commands::InstallHooks => install_hooks(),
         Commands::UninstallHooks => uninstall_hooks(),
     }
