@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GlobalSettings {
@@ -63,6 +63,10 @@ impl ConfigManager {
         let default_config = SelectiveIgnoreConfig::default();
         self.save_config(&default_config)?;
         Ok(())
+    }
+
+    pub fn get_repo_root(&self) -> &Path {
+        &self.repo_root
     }
 }
 
