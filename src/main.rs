@@ -1,7 +1,7 @@
 use anyhow::{Result};
 use clap::{Parser, Subcommand};
 use crate::core::config::ConfigManager;
-use crate::utils::install_hooks;
+use crate::utils::{install_hooks, uninstall_hooks};
 
 mod core;
 mod utils;
@@ -21,6 +21,8 @@ enum Commands {
     Init,
     /// Install git hooks for automatic processing
     InstallHooks,
+    /// Uninstall git hooks
+    UninstallHooks,
 }
 
 fn main() -> Result<()> {
@@ -35,5 +37,6 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Init => utils::initialize_repository(),
         Commands::InstallHooks => install_hooks(),
+        Commands::UninstallHooks => uninstall_hooks(),
     }
 }
