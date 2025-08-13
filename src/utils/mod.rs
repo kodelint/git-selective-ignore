@@ -10,6 +10,20 @@ pub fn initialize_repository() -> Result<()> {
     Ok(())
 }
 
+pub fn add_ignore_pattern(file_path: String, pattern_type: String, pattern: String) -> Result<()> {
+    let mut config_manager = get_config_manager()?;
+    config_manager.add_pattern(file_path, pattern_type, pattern)?;
+    println!("✓ Added ignore pattern");
+    Ok(())
+}
+
+pub fn remove_ignore_pattern(file_path: String, pattern_id: String) -> Result<()> {
+    let mut config_manager = get_config_manager()?;
+    config_manager.remove_pattern(file_path, pattern_id)?;
+    println!("✓ Removed ignore pattern");
+    Ok(())
+}
+
 pub fn install_hooks() -> Result<()> {
     let config_manager = get_config_manager()?;
     hooks::install_git_hooks(&config_manager.get_repo_root())?;
