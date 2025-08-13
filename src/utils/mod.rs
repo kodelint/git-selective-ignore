@@ -24,6 +24,12 @@ pub fn remove_ignore_pattern(file_path: String, pattern_id: String) -> Result<()
     Ok(())
 }
 
+pub fn list_patterns() -> Result<()> {
+    let config_manager = get_config_manager()?;
+    config_manager.list_patterns()?;
+    Ok(())
+}
+
 pub fn install_hooks() -> Result<()> {
     let config_manager = get_config_manager()?;
     hooks::install_git_hooks(&config_manager.get_repo_root())?;
