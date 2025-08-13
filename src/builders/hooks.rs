@@ -69,6 +69,17 @@ pub fn install_git_hooks(repo_root: &Path) -> Result<()> {
     Ok(())
 }
 
+pub fn uninstall_git_hooks(repo_root: &Path) -> Result<()> {
+    let hooks_dir = repo_root.join(".git").join("hooks");
+
+    uninstall_hook(&hooks_dir, "pre-commit")?;
+    uninstall_hook(&hooks_dir, "post-commit")?;
+    uninstall_hook(&hooks_dir, "post-merge")?;
+    uninstall_hook(&hooks_dir, "pre-push")?;
+
+    Ok(())
+}
+
 fn install_hook(hooks_dir: &Path, hook_name: &str, hook_content: &str) -> Result<()> {
     let hook_path = hooks_dir.join(hook_name);
 
@@ -95,6 +106,28 @@ fn install_hook(hooks_dir: &Path, hook_name: &str, hook_content: &str) -> Result
         let mut perms = fs::metadata(&hook_path)?.permissions();
         perms.set_mode(0o755);
         fs::set_permissions(&hook_path, perms)?;
+    }
+
+    Ok(())
+}
+
+fn uninstall_hook(hooks_dir: &Path, hook_name: &str) -> Result<()> {
+    let hook_path = hooks_dir.join(hook_name);
+    let backup_path = hooks_dir.join(format!("{hook_name}.backup"));
+
+    if hook_path.exists() {
+        // Check if it's our hook before removing
+        let content = fs::read_to_string(&hook_path)?;
+        if content.contains("Git Selective Ignore") {
+            fs::remove_file(&hook_path)?;
+            println!("✓ Removed {hook_name} hook");
+
+            // Restore backup if exists
+            if backup_path.exists() {
+                fs::rename(&backup_path, &hook_path)?;
+                println!("✓ Restored original {hook_name} hook");
+            }
+        }
     }
 
     Ok(())
