@@ -1,7 +1,7 @@
 use anyhow::{Result};
 use clap::{Parser, Subcommand};
 use crate::core::config::ConfigManager;
-use crate::utils::{add_ignore_pattern, install_hooks, list_patterns, remove_ignore_pattern, uninstall_hooks};
+use crate::utils::{add_ignore_pattern, install_hooks, list_patterns, process_post_commit, process_pre_commit, remove_ignore_pattern, uninstall_hooks};
 
 mod core;
 mod utils;
@@ -38,6 +38,11 @@ enum Commands {
     },
     /// List all configured ignore patterns
     List,
+    /// Process files before commit (used by git hooks)
+    PreCommit,
+    /// Restore files after commit (used by git hooks)
+    PostCommit,
+    /// Install git hooks for automatic processing
     /// Install git hooks for automatic processing
     InstallHooks,
     /// Uninstall git hooks
@@ -65,6 +70,8 @@ fn main() -> Result<()> {
             pattern_id,
         } => remove_ignore_pattern(file_path, pattern_id),
         Commands::List => list_patterns(),
+        Commands::PreCommit => process_pre_commit(),
+        Commands::PostCommit => process_post_commit(),
         Commands::InstallHooks => install_hooks(),
         Commands::UninstallHooks => uninstall_hooks(),
     }
