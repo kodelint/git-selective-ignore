@@ -117,6 +117,35 @@ pub fn show_status() -> Result<()> {
     Ok(())
 }
 
+/// Imports patterns from an external file into the selective ignore configuration.
+///
+/// This allows users to share and reuse patterns between different projects.
+///
+/// # Arguments
+/// * `file_path`: The path to the external file containing the patterns.
+/// * `import_type`: The format of the import file (e.g., "json", "yaml").
+pub fn import_patterns(file_path: String, import_type: String) -> Result<()> {
+    let mut config_manager = get_config_manager()?;
+    config_manager.import_patterns(file_path, import_type)?;
+    println!("✓ Imported patterns");
+    Ok(())
+}
+
+/// Exports the current selective ignore configuration to an external file.
+///
+/// This is the counterpart to `import_patterns` and is used to save or share
+/// a repository's ignore configuration.
+///
+/// # Arguments
+/// * `file_path`: The path where the exported file should be saved.
+/// * `format`: The desired output format (e.g., "json", "yaml").
+pub fn export_patterns(file_path: String, format: String) -> Result<()> {
+    let config_manager = get_config_manager()?;
+    config_manager.export_patterns(&file_path, format)?;
+    println!("✓ Exported patterns to {file_path}");
+    Ok(())
+}
+
 /// A private helper function to create and return an `IgnoreEngine` instance.
 ///
 /// This function encapsulates the logic of initializing the `ConfigManager`
