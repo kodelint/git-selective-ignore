@@ -18,6 +18,7 @@ edition = "2024"
 # Cargo automatically downloads, compiles, and links these dependencies for you.
 [dependencies]
 anyhow = "1.0.99"
+chrono = "0.4.41"
 clap = { version = "4.5.41", features = ["derive"] }
 git2 = "0.20.2"
 regex = "1.11.1"
