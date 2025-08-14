@@ -117,6 +117,16 @@ pub fn show_status() -> Result<()> {
     Ok(())
 }
 
+/// Verifies that no ignored content is present in the staging area.
+///
+/// This can be used as a stricter pre-commit check that fails if any ignored
+/// content is detected, rather than automatically removing it.
+pub fn verify_staging_area() -> Result<()> {
+    let mut engine = get_engine()?;
+    engine.verify_staging()?;
+    Ok(())
+}
+
 /// Imports patterns from an external file into the selective ignore configuration.
 ///
 /// This allows users to share and reuse patterns between different projects.

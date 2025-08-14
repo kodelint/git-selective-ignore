@@ -5,6 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use crate::builders::importer::{FileImporter, PatternImporter};
 use crate::builders::patterns::IgnorePattern;
+use crate::builders::validator::{ConfigValidator, StandardValidator};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GlobalSettings {
@@ -65,6 +66,23 @@ impl ConfigManager {
         let default_config = SelectiveIgnoreConfig::default();
         self.save_config(&default_config)?;
         Ok(())
+    }
+
+    pub fn validate_config(&self) -> Result<()> {
+        let config = self.load_config()?;
+        let validator = StandardValidator::new();
+        let issues = validator.validate_config(&config)?;
+
+        if issues.is_empty() {
+            println!("✓ Configuration is valid.");
+            Ok(())
+        } else {
+            println!("⚠️  Found issues in configuration:");
+            for issue in issues {
+                println!("  - {issue}");
+            }
+            anyhow::bail!("Configuration validation failed.");
+        }
     }
 
     pub fn add_pattern(
