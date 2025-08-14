@@ -1,7 +1,7 @@
 use anyhow::{Result};
 use clap::{Parser, Subcommand};
 use crate::core::config::ConfigManager;
-use crate::utils::{add_ignore_pattern, install_hooks, list_patterns, process_post_commit, process_pre_commit, remove_ignore_pattern, uninstall_hooks};
+use crate::utils::{add_ignore_pattern, install_hooks, list_patterns, process_post_commit, process_pre_commit, remove_ignore_pattern, show_status, uninstall_hooks};
 
 mod core;
 mod utils;
@@ -43,10 +43,11 @@ enum Commands {
     /// Restore files after commit (used by git hooks)
     PostCommit,
     /// Install git hooks for automatic processing
-    /// Install git hooks for automatic processing
     InstallHooks,
     /// Uninstall git hooks
     UninstallHooks,
+    /// Check status of ignored lines
+    Status,
 }
 
 fn main() -> Result<()> {
@@ -74,5 +75,6 @@ fn main() -> Result<()> {
         Commands::PostCommit => process_post_commit(),
         Commands::InstallHooks => install_hooks(),
         Commands::UninstallHooks => uninstall_hooks(),
+        Commands::Status => show_status(),
     }
 }
