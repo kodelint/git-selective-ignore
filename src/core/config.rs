@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-
+use crate::builders::importer::{FileImporter, PatternImporter};
 use crate::builders::patterns::IgnorePattern;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -119,7 +119,40 @@ impl ConfigManager {
         }
         Ok(())
     }
-    
+
+    pub fn import_patterns(&mut self, file_path: String, import_type: String) -> Result<()> {
+        let mut importer = FileImporter::new();
+        let patterns = importer.import_from_file(&file_path, &import_type)?;
+
+        let mut config = self.load_config()?;
+        for (file, pattern_list) in patterns {
+            config
+                .files
+                .entry(file)
+                .or_insert_with(Vec::new)
+                .extend(pattern_list);
+        }
+
+        self.save_config(&config)?;
+        Ok(())
+    }
+
+    pub fn export_patterns(&self, file_path: &str, format: String) -> Result<()> {
+        let config = self.load_config()?;
+
+        let content = match format.as_str() {
+            "json" => {
+                serde_json::to_string_pretty(&config).context("Failed to serialize to JSON")?
+            }
+            "yaml" => serde_yaml::to_string(&config).context("Failed to serialize to YAML")?,
+            "toml" | _ => toml::to_string_pretty(&config).context("Failed to serialize to TOML")?,
+        };
+
+        std::fs::write(file_path, content).context("Failed to write export file")?;
+
+        Ok(())
+    }
+
     pub fn get_repo_root(&self) -> &Path {
         &self.repo_root
     }
