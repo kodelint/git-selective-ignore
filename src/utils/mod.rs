@@ -107,6 +107,16 @@ pub fn uninstall_hooks() -> Result<()> {
     Ok(())
 }
 
+/// Displays a status report for all configured files.
+///
+/// This command provides a summary of which files are configured, whether they exist,
+/// and how many lines would be ignored based on the current configuration.
+pub fn show_status() -> Result<()> {
+    let mut engine = get_engine()?;
+    engine.show_status()?;
+    Ok(())
+}
+
 /// A private helper function to create and return an `IgnoreEngine` instance.
 ///
 /// This function encapsulates the logic of initializing the `ConfigManager`
