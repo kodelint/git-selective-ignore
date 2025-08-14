@@ -6,6 +6,7 @@ use std::path::Path;
 
 use crate::builders::storage::{BackupData, MemoryStorage, StorageProvider, TempFileStorage};
 use crate::builders::patterns::{IgnorePattern, PatternMatcher, PatternType};
+use crate::builders::reporter::{ConsoleReporter, FileStatus, StatusReporter};
 use crate::core::config::{BackupStrategy, ConfigManager, ConfigProvider};
 
 /// The `IgnoreEngine` is the central component responsible for managing the selective
