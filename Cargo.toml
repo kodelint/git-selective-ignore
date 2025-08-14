@@ -1,10 +1,46 @@
-# Cargo.toml
+## Cargo.toml
+#
+## This section defines fundamental information about your Rust project,
+## similar to how a package.json works for Node.js or a pom.xml for Java.
+#[package]
+## 'name' is the name of your executable binary and the package itself.
+## This is how you'll typically run your application (e.g., `cargo run --bin setup-devbox`).
+#name = "git-selective-ignore"
+## 'version' follows Semantic Versioning (Major.Minor.Patch).
+## It indicates the current release version of your application.
+#version = "0.0.1"
+## 'edition' specifies the Rust edition to use for compiling this package.
+## Rust editions allow the language to evolve without breaking existing code.
+## "2024" is a newer edition that enables modern Rust features and syntax.
+#edition = "2024"
+#
+## This section lists all the external crates (libraries) that your project depends on.
+## Cargo automatically downloads, compiles, and links these dependencies for you.
+#[dependencies]
+#anyhow = "1.0.99"
+#chrono = "0.4.41"
+#clap = { version = "4.5.41", features = ["derive"] }
+#git2 = "0.20.2"
+#regex = "1.11.1"
+#serde = { version = "1.0.219", features = ["derive"] }
+#serde_json = "1.0.142"
+#serde_yaml = "0.9.34"
+#tempfile = "3.20.0"
+#toml = "0.9.5"
+#uuid = { version = "1.18.0", features = ["v4"] }
 
+# This file is the manifest for a Rust project. It contains all the metadata
+# that Cargo (Rust's build system and package manager) needs to build your code,
+# run tests, and manage dependencies.
+
+# =================================================================================
+# [package] Section
+# =================================================================================
 # This section defines fundamental information about your Rust project,
 # similar to how a package.json works for Node.js or a pom.xml for Java.
 [package]
 # 'name' is the name of your executable binary and the package itself.
-# This is how you'll typically run your application (e.g., `cargo run --bin setup-devbox`).
+# This is how you'll typically run your application (e.g., `cargo run --bin git-selective-ignore`).
 name = "git-selective-ignore"
 # 'version' follows Semantic Versioning (Major.Minor.Patch).
 # It indicates the current release version of your application.
@@ -14,17 +50,43 @@ version = "0.0.1"
 # "2024" is a newer edition that enables modern Rust features and syntax.
 edition = "2024"
 
+# =================================================================================
+# [dependencies] Section
+# =================================================================================
 # This section lists all the external crates (libraries) that your project depends on.
 # Cargo automatically downloads, compiles, and links these dependencies for you.
 [dependencies]
+# `anyhow` is a crate for easy and ergonomic error handling. It's often used
+# in application code to simplify propagating errors with context.
 anyhow = "1.0.99"
-chrono = "0.4.41"
+# `clap` is a popular crate for parsing command-line arguments. The `derive` feature
+# enables `clap` to automatically generate a parser from a Rust struct, which is
+# what is used in `main.rs`.
 clap = { version = "4.5.41", features = ["derive"] }
+# `git2` is a Rust binding for the libgit2 C library. It provides a native
+# interface for interacting with Git repositories, allowing the application to
+# read the Git index and manipulate files in the working directory.
 git2 = "0.20.2"
+# `regex` is a crate for working with regular expressions. It is used to
+# match patterns in the file content.
 regex = "1.11.1"
+# `serde` is a framework for serializing and deserializing Rust data structures.
+# The `derive` feature allows structs and enums to be automatically serialized/deserialized.
 serde = { version = "1.0.219", features = ["derive"] }
+# `serde_json`, `serde_yaml`, and `toml` are crates for working with specific
+# serialization formats. They are used to read and write the configuration file
+# and to support the `export` command.
 serde_json = "1.0.142"
 serde_yaml = "0.9.34"
-tempfile = "3.20.0"
+# read and write `toml` files
 toml = "0.9.5"
-uuid = { version = "1.18.0", features = ["v4"] }
+# `uuid` is a library for generating and parsing Universally Unique Identifiers (UUIDs).
+# It is used to generate unique IDs for each ignore pattern.
+uuid = { version = "1.18.0", features = ["v4", "serde"] }
+
+# =================================================================================
+# [dev-dependencies] Section
+# =================================================================================
+# This section is for dependencies that are only used during development,
+# such as for writing tests or benchmarks.
+[dev-dependencies]

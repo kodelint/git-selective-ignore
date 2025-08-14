@@ -100,7 +100,7 @@ impl FileImporter {
     fn parse_gitignore_style(
         &self,
         content: &str,
-        target_file: &str,
+        _target_file: &str,
     ) -> Result<Vec<IgnorePattern>> {
         let mut patterns = Vec::new();
 
