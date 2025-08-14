@@ -1,7 +1,7 @@
 use anyhow::{Result};
 use clap::{Parser, Subcommand};
 use crate::core::config::ConfigManager;
-use crate::utils::{add_ignore_pattern, export_patterns, import_patterns, install_hooks, list_patterns, process_post_commit, process_pre_commit, remove_ignore_pattern, show_status, uninstall_hooks};
+use crate::utils::{add_ignore_pattern, export_patterns, import_patterns, install_hooks, list_patterns, process_post_commit, process_pre_commit, remove_ignore_pattern, show_status, uninstall_hooks, verify_staging_area};
 
 mod core;
 mod utils;
@@ -48,6 +48,8 @@ enum Commands {
     UninstallHooks,
     /// Check status of ignored lines
     Status,
+    /// Verify no ignored content is in staging area
+    Verify,
     /// Import patterns from existing tools (.gitignore style)
     Import {
         /// Import from file path
@@ -72,7 +74,7 @@ fn main() -> Result<()> {
     // Validate config for all commands except `init` and `install-hooks`
     if !matches!(cli.command, Commands::Init | Commands::InstallHooks) {
         let config_manager = ConfigManager::new()?;
-        println!("Initializing...");
+        config_manager.validate_config()?;
     }
 
     match cli.command {
@@ -92,6 +94,7 @@ fn main() -> Result<()> {
         Commands::InstallHooks => install_hooks(),
         Commands::UninstallHooks => uninstall_hooks(),
         Commands::Status => show_status(),
+        Commands::Verify => verify_staging_area(),
         Commands::Import {
             file_path,
             import_type,
