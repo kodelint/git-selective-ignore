@@ -1,10 +1,22 @@
 # git-selective-ignore
 
-#### A Git plugin to selectively ignore lines and code blocks during commits.
+![Rust Logo](https://img.shields.io/badge/Rust-red?style=for-the-badge&logo=rust)
+![Platform](https://img.shields.io/badge/Platform-macOS-blue?style=for-the-badge&logo=apple)
+
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/kodelint/git-selective-ignore/actions/workflows/workflow.yml/badge.svg)](https://github.com/kodelint/git-selective-ignore/actions/workflows/workflow.yml)
+[![GitHub release](https://img.shields.io/github/release/kodelint/git-selective-ignore.svg)](https://github.com/kodelint/git-selective-ignore/releases)
+[![GitHub stars](https://img.shields.io/github/stars/kodelint/git-selective-ignore.svg)](https://github.com/kodelint/git-selective-ignore/stargazers)
+[![Last commit](https://img.shields.io/github/last-commit/kodelint/git-selective-ignore.svg)](https://github.com/kodelint/git-selective-ignore/commits/main)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/kodelint/git-selective-ignore/pulls)
+
 
 <p align="center">
   <img src="https://github.com/kodelint/blog-images/blob/main/common/01-git-selecting-ignore.png" alt="git-selective-ignore" width="500"/>
 </p>
+
+#### A Git plugin to selectively ignore lines and code blocks during commits.
 
 `git-selective-ignore` is a powerful Git extension that allows you to manage which parts of a file are committed without
 modifying the file itself. Unlike `.gitignore`, which ignores entire files, this tool enables you to ignore specific lines,
@@ -14,6 +26,7 @@ or sensitive data out of your commits.
 The tool works by temporarily stripping out the ignored content from staged files before a commit and then restoring
 the files to their original state after the commit is complete. This process is managed automatically via Git hooks,
 ensuring a seamless workflow.
+
 ---
 ## Features
 - **Pattern-Based Ignoring:** Define ignore patterns using regular expressions, line numbers, or start/end markers for code blocks.
