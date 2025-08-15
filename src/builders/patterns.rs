@@ -217,8 +217,8 @@ impl PatternMatcher for IgnorePattern {
         let start_pattern = parts[0].trim();
         let end_pattern = parts[1].trim();
 
-        println!("DEBUG: Start pattern: '{start_pattern}'");
-        println!("DEBUG: End pattern: '{end_pattern}'");
+        // println!("DEBUG: Start pattern: '{start_pattern}'");
+        // println!("DEBUG: End pattern: '{end_pattern}'");
 
         let mut ranges = Vec::new();
         let lines: Vec<&str> = content.lines().collect();
@@ -227,11 +227,11 @@ impl PatternMatcher for IgnorePattern {
         while i < lines.len() {
             // Look for start pattern using contains() for literal string matching
             if lines[i].contains(start_pattern) {
-                println!(
-                    "DEBUG: Found start pattern at line {}: '{}'",
-                    i + 1,
-                    lines[i]
-                );
+                // println!(
+                //     "DEBUG: Found start pattern at line {}: '{}'",
+                //     i + 1,
+                //     lines[i]
+                // );
                 let start_line = i + 1; // 1-based line number for the start
 
                 // Look for end pattern
@@ -239,7 +239,7 @@ impl PatternMatcher for IgnorePattern {
                 // Start a nested loop to search for the end pattern from the next line.
                 for j in i + 1..lines.len() {
                     if lines[j].contains(end_pattern) {
-                        println!("DEBUG: Found end pattern at line {}: '{}'", j + 1, lines[j]);
+                        // println!("DEBUG: Found end pattern at line {}: '{}'", j + 1, lines[j]);
                         let end_line = j + 1; // Convert to 1-based line number
                         ranges.push((start_line, end_line));
                         // Move the outer loop's index past the end of the found block
@@ -253,7 +253,7 @@ impl PatternMatcher for IgnorePattern {
                 // If no end pattern was found, the start pattern is ignored.
                 if !found_end {
                     // If no end pattern found, just ignore the start pattern
-                    println!("DEBUG: No matching end pattern found for start at line {start_line}");
+                    // println!("DEBUG: No matching end pattern found for start at line {start_line}");
                     i += 1;
                 }
             } else {
@@ -261,7 +261,7 @@ impl PatternMatcher for IgnorePattern {
             }
         }
 
-        println!("DEBUG: Found {} block ranges: {:?}", ranges.len(), ranges);
+        // println!("DEBUG: Found {} block ranges: {:?}", ranges.len(), ranges);
         Ok(ranges)
     }
 }
