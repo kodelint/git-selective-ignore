@@ -33,6 +33,7 @@ colored = "3.0.0"
 # interface for interacting with Git repositories, allowing the application to
 # read the Git index and manipulate files in the working directory.
 git2 = "0.20.2"
+native-tls = "0.2.14"
 # `regex` is a crate for working with regular expressions. It is used to
 # match patterns in the file content.
 regex = "1.11.1"
