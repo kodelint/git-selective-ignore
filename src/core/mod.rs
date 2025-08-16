@@ -32,3 +32,4 @@ pub mod config;
 // The engine is the central component that ties together the configuration,
 // patterns, and file system interactions to achieve the tool's primary goal.
 pub mod engine;
+pub(crate) mod version;
