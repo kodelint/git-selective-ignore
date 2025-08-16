@@ -66,7 +66,7 @@ pub fn list_patterns() -> Result<()> {
 ///
 /// This function is intended to be called by the `pre-commit` Git hook. It
 /// initializes the `IgnoreEngine`, which then finds staged files, applies
-/// ignore patterns, backs up the original content, and re-stages the cleaned content.
+/// to ignore patterns, backs up the original content, and re-stages the cleaned content.
 pub fn process_pre_commit() -> Result<()> {
     let mut engine = get_engine()?;
     engine.process_pre_commit()?;
