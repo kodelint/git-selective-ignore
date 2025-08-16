@@ -18,11 +18,11 @@
 
 A Git plugin to selectively ignore lines and code blocks during commits
 
-`git-selective-ignore` is a Git extension that lets you control which parts of a file get committed without modifying the 
-file itself. Unlike `.gitignore`, which excludes whole files, this tool allows you to ignore specific lines, regex patterns, 
+`git-selective-ignore` is a Git extension that lets you control which parts of a file get committed without modifying the
+file itself. Unlike `.gitignore`, which excludes whole files, this tool allows you to ignore specific lines, regex patterns,
 or code blocks. It’s especially useful for local configs, debug statements, or sensitive values that you don’t want in your Git history.
 
-It works by stripping ignored content from staged files before commit, then restoring files afterward. Git hooks handle 
+It works by stripping ignored content from staged files before commit, then restoring files afterward. Git hooks handle
 this automatically, so the workflow stays seamless.
 
 ---
@@ -128,7 +128,11 @@ git-selective-ignore list
 
 #### 5. Check Status
 
-Use the `status` command to see which files have ignored content and how many lines would be removed in a commit.
+Use the `status` command to see which files have ignored content and how many lines would be removed in a commit. However, keep in mind that `status` can be
+an expensive command depending on the size of the repository.
+Presently, it looks at all files for the ignore pattern under `all` section.
+
+(_maybe in future I will move it to only look at the staged files, due to **scope of responsibility**_)
 
 ```bash
 git-selective-ignore status
@@ -136,7 +140,7 @@ git-selective-ignore status
 
 This command provides a summary of the ignored lines in your project.
 
---- 
+---
 
 #### Documented [Example](./Usage.md)
 
@@ -201,6 +205,7 @@ backup_strategy = "TempFile"
 auto_cleanup = true
 verbose = false
 ```
+
 You can manually edit this file to configure your patterns and global settings.
 
 ---
