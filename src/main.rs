@@ -6,7 +6,10 @@ use clap::{Parser, Subcommand};
 mod builders;
 mod core;
 mod utils;
-use crate::core::config::ConfigManager;
+use crate::core::{
+    config::ConfigManager,
+    version::run
+};
 // Import all public functions from the `utils` module. These functions
 // are the core logic handlers for each command-line action.
 use crate::utils::{
@@ -137,6 +140,8 @@ enum Commands {
         #[arg(short, long, default_value = "toml")]
         format: String,
     },
+    ///
+    Version,
 }
 
 /// The main entry point of the application.
@@ -152,7 +157,7 @@ fn main() -> Result<()> {
     // Perform a configuration validation check for most commands.
     // The `Init` and `InstallHooks` commands are excluded because they
     // are often run before a valid configuration exists.
-    if !matches!(cli.command, Commands::Init | Commands::InstallHooks) {
+    if !matches!(cli.command, Commands::Init | Commands::InstallHooks | Commands::Version) {
         let config_manager = ConfigManager::new()?;
         config_manager.validate_config()?;
     }
@@ -183,5 +188,6 @@ fn main() -> Result<()> {
             import_type,
         } => import_patterns(file_path, import_type),
         Commands::Export { file_path, format } => export_patterns(file_path, format),
+        Commands::Version => Ok(run()),
     }
 }
