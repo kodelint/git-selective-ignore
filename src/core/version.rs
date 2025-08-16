@@ -80,7 +80,7 @@ pub fn run() {
         Ok(local_version) => {
             // Always print local version
             println!(
-                "└─ Local version: {}",
+                "├─ Local version: {}",
                 local_version.bright_yellow().bold()
             );
 
@@ -97,10 +97,8 @@ pub fn run() {
                             "{}",
                             format!(
                                 "└─ Update available! (Local: {}, Latest: {})",
-                                local_version, latest_version
+                                local_version.red(), latest_version.bright_green()
                             )
-                                .red()
-                                .bold()
                         );
                     } else {
                         println!("{}", "└─ You are running the latest version.".green().bold());
