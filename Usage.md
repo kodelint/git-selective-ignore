@@ -27,37 +27,37 @@
     git init
     ```
 
-2.  Create a sample code file with **content-not-needed-in-git-history**:
+   2.  Create a sample code file with **content-not-needed-in-git-history**:
 
-    ```rust
-    use std::env;
-
-    fn main() {
-        println!("Starting application...");
-
-        // DEBUG BLOCK START
-        println!("Debug: Application started in debug mode");
-        // DEBUG BLOCK END
-
-        let API_KEY = "sk_live_1234567890abcdef";
-        println!("Using API key: {}", API_KEY);
-
-        /* Below lines are temporary and line numbers are 13-16 */
-        let temp_feature = "experimental_feature_xyz";
-        println!("Testing temporary feature: {}", temp_feature);
-        /* Remember to remove lines from 13-16 */
-
-        let SECRET = "Some Dumb key";
-        println!("SECRET Removed");
-        let GITHUB_TOKEN = "Another Dumb Key";
-
-        println!("Application completed successfully");
-    }
-
-    fn process_data() -> i32 {
-        42
-    }
-    ```
+       ```rust
+       use std::env;
+    
+       fn main() {
+           println!("Starting application...");
+    
+           // DEBUG BLOCK START
+           println!("Debug: Application started in debug mode");
+           // DEBUG BLOCK END
+    
+           let API_KEY = "sk_live_1234567890abcdef";
+           println!("Using API key: {}", API_KEY);
+    
+           /* Imagine the below lines are temporary and line numbers are 13-16 */
+           let temp_feature = "experimental_feature_xyz";
+           println!("Testing temporary feature: {}", temp_feature);
+           /* Remember to remove lines from 10-14 */
+    
+           let SECRET = "Some Dumb key";
+           println!("SECRET Removed");
+           let GITHUB_TOKEN = "Another Dumb Key";
+    
+           println!("Application completed successfully");
+       }
+    
+       fn process_data() -> i32 {
+           42   
+       }
+       ```
 
 3.  Check created files:
     ```bash
@@ -279,61 +279,56 @@
     +}
     ```
 
-10. Workspace after commit:
-    Notice `+` lines are not in Git history
+   10. Workspace after commit:
+       Notice `+` lines are not in Git history for `src/main.rs` and `src/lib.rs`
+       ```rust
+            │ // src/main.rs
+        1   │ use std::env;
+        2   │
+        3   │ fn main() {
+        4   │     println!("Starting application...");
+        5   │
+        6 + │     let API_KEY = "sk_live_1234567890abcdef";
+        7   │     println!("Using API key: {}", API_KEY);
+        8   │
+        9   │     /* Temporary lines for testing - remove before prod */
+        10  │     let temp_feature = "experimental_feature_xyz";
+        11  │     println!("Testing temporary feature: {}", temp_feature);
+        12  │     /* End temporary section */
+        13 +│
+        14 +│     let SECRET = "Some secret value";
+        15 +│     println!("SECRET configured");
+        16 +│
+        17  │     println!("Application completed successfully");
+        18  │ }
+        19  │
+        20  │ fn process_data() -> i32 {
+        21  │     42
+        22  │ }
+       ```
+       ```rust
 
-    ```bash
-    >> cat src/*
-          │ File: src/lib.rs
-      1   │ fn main() {
-      2   │     println!("Another Test");
-      3   │
-      4 + │     let GITHUB_TOKEN = "github_fake_token_093790841-831-8lncdlwnelkqix12=-1x;xm;m"
-      5 + │
-      6   │     println!("{} <- My GitHub Token", GITHUB_TOKEN);
-      7   │ }
-
-          │ File: src/main.rs
-      1   │ use std::env;
-      2   │
-      3   │ fn main() {
-      4   │     println!("Starting application...");
-      5   │
-      6 + │     // DEBUG BLOCK START
-      7 + │     println!("Debug: Application started in debug mode");
-      8 + │     // DEBUG BLOCK END
-      9 + │
-      10 +│     let API_KEY = "sk_live_1234567890abcdef";
-      11  │     println!("Using API key: {}", API_KEY);
-      12  │
-      13 +│     /* Imagine the below lines are temporary and line numbers are 13-16 */
-      14 +│     let temp_feature = "experimental_feature_xyz";
-      15 +│     println!("Testing temporary feature: {}", temp_feature);
-      16 +│     /* Remember to remove lines from 10-14 */
-      17 +│
-      18 +│     let SECRET = "Some Dumb key";
-      19  │     println!("SECRET Removed");
-      20 +│     let GITHUB_TOKEN = "Another Dumb Key";
-      21  │
-      22  │     println!("Application completed successfully");
-      23  │ }
-      24  │
-      25  │ fn process_data() -> i32 {
-      26  │     42
-      27  │ }
-    ```
+        1   │ use std::env;
+        2   │
+        3   │ fn main() {
+        4   │     println!("Another Test");
+        5   │
+        6 + │     let GITHUB_TOKEN = "github_fake_token_093790841-831-8lncdlwnelkqix12=-1x;xm;m";
+        7 + │
+        8   │     println!("{} <- My GitHub Token", GITHUB_TOKEN);
+       ```
 
 11. Add more code to `src/lib.rs`:
 
     ```rust
-    let API_KEY = env::var('API_KEY');
+    let api_key = env::var("API_KEY");
 
-    match env::var('API_KEY') {
+    match env::var("API_KEY") {
         Ok(value) => {
-            println!("The value of APP_KEY is: {}", API_KEY);
+            println!("The value of APP_KEY is: {}", value);
         }
         Err(e) => {
-            eprintln!("Error getting environment variable {}: {}", 'API_KEY', e);
+            eprintln!("Error getting environment variable {}: {}", "API_KEY", e);
         }
     }
     ```
