@@ -16,8 +16,6 @@
 
 #### A Git plugin to selectively ignore lines and code blocks during commits.
 
-A Git plugin to selectively ignore lines and code blocks during commits
-
 `git-selective-ignore` is a Git extension that lets you control which parts of a file get committed without modifying the
 file itself. Unlike `.gitignore`, which excludes whole files, this tool allows you to ignore specific lines, regex patterns,
 or code blocks. It’s especially useful for local configs, debug statements, or sensitive values that you don’t want in your Git history.
