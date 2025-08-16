@@ -54,6 +54,15 @@ pub trait StorageProvider {
     /// or `None` if no backup was found.
     fn restore_backup(&mut self, file_path: &str) -> Result<Option<BackupData>>;
 
+    /// Returns all the file paths that currently have backup data stored.
+    ///
+    /// This is used during post-commit processing to identify all files that
+    /// were modified during pre-commit, especially when "all" patterns are used.
+    ///
+    /// # Returns
+    /// `Result<Vec<String>>`: A vector of file paths that have stored backups.
+    fn get_all_backup_keys(&self) -> Result<Vec<String>>;
+
     /// Cleans up all stored backup data.
     ///
     /// This is typically called after the post-commit hook has run to clear
@@ -103,6 +112,23 @@ impl TempFileStorage {
         let safe_filename = file_path.replace(['/', '\\'], "_");
         self.temp_dir.join(format!("{safe_filename}.backup"))
     }
+
+    /// A private helper function to reverse the filename sanitization.
+    ///
+    /// Takes a backup filename and converts it back to the original file path.
+    ///
+    /// # Arguments
+    /// * `backup_filename`: The sanitized backup filename.
+    ///
+    /// # Returns
+    /// `String`: The original file path.
+    fn restore_file_path_from_backup_name(&self, backup_filename: &str) -> String {
+        // Remove the .backup extension and restore path separators
+        backup_filename
+            .strip_suffix(".backup")
+            .unwrap_or(backup_filename)
+            .replace('_', "/")
+    }
 }
 
 /// Implementation of the `StorageProvider` trait for `TempFileStorage`.
@@ -132,6 +158,30 @@ impl StorageProvider for TempFileStorage {
         }
 
         Ok(None)
+    }
+
+    /// Returns all file paths that have backup files in the temp directory.
+    fn get_all_backup_keys(&self) -> Result<Vec<String>> {
+        // This vector will store the decoded file paths from the backup file names.
+        let mut keys = Vec::new();
+
+        if self.temp_dir.exists() {
+            let entries = fs::read_dir(&self.temp_dir).context("Failed to read backup directory")?;
+            // Read all the entries (files and directories) in the temporary backup directory.
+            // The `?` operator handles any potential I/O errors and returns early.
+            for entry in entries {
+                let entry = entry.context("Failed to read directory entry")?;
+                let filename = entry.file_name().to_string_lossy().to_string();
+
+                // Only process files with .backup extension
+                if filename.ends_with(".backup") {
+                    let original_path = self.restore_file_path_from_backup_name(&filename);
+                    keys.push(original_path);
+                }
+            }
+        }
+
+        Ok(keys)
     }
 
     /// Cleans up the entire temporary backup directory.
@@ -175,6 +225,11 @@ impl StorageProvider for MemoryStorage {
         // `HashMap::remove` returns `Some(value)` if the key existed, otherwise `None`.
         // This fits the method's return type perfectly.
         Ok(self.backups.remove(file_path))
+    }
+
+    /// Returns all the file paths (keys) that currently have backup data stored.
+    fn get_all_backup_keys(&self) -> Result<Vec<String>> {
+        Ok(self.backups.keys().cloned().collect())
     }
 
     /// Clears the `HashMap`, effectively removing all backups from memory.
