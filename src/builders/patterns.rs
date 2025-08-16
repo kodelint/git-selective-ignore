@@ -7,16 +7,23 @@ use uuid::Uuid;
 /// An enum that defines the different types of patterns supported by the engine.
 ///
 /// Each variant corresponds to a different method for identifying lines or blocks
-/// of text to be ignored.
+/// of text to be ignored. This design allows for a flexible and extensible
+/// pattern-matching system.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum PatternType {
-    /// Matches lines using a regular expression.
+    /// Matches lines using a regular expression. The specification string can be
+    /// either a raw regex (enclosed in `/` delimiters) or a literal word that
+    /// will be matched with word boundaries (`\b`).
     LineRegex,
-    /// Matches a single, specific line number.
+    /// Matches a single, specific line number. The specification is a string
+    /// representation of a 1-based line number (e.g., "42").
     LineNumber,
-    /// Matches a block of lines starting with one literal string and ending with another.
+    /// Matches a block of lines starting with one literal string and ending
+    /// with another. The specification is a string in the format
+    /// `start_pattern|||end_pattern`.
     BlockStartEnd,
-    /// Matches a contiguous range of line numbers.
+    /// Matches a contiguous range of line numbers. The specification is a string
+    /// in the format `start_line-end_line` (e.g., "10-20").
     LineRange,
 }
 
@@ -57,8 +64,13 @@ impl fmt::Display for PatternType {
 ///
 /// This trait allows the `IgnoreEngine` to treat all pattern types uniformly when
 /// processing file content, abstracting away the specifics of how each pattern works.
+/// Implementors of this trait provide the logic for checking a line or finding a block.
 pub trait PatternMatcher {
     /// Checks if a single line of content matches the pattern.
+    ///
+    /// This method is intended for line-based patterns (`LineRegex`, `LineNumber`, `LineRange`).
+    /// For block patterns, this method should always return `Ok(false)` as their logic
+    /// is handled by `get_block_range`.
     ///
     /// # Arguments
     /// * `line`: The string slice of the line to check.
@@ -66,6 +78,7 @@ pub trait PatternMatcher {
     ///
     /// # Returns
     /// `Result<bool>` which is `true` if the line matches, `false` otherwise.
+    /// An `anyhow::Error` is returned if parsing the specification fails.
     fn matches_line(&self, line: &str, line_number: usize) -> Result<bool>;
 
     /// Finds and returns all line number ranges that match a block pattern.
@@ -78,16 +91,24 @@ pub trait PatternMatcher {
     ///
     /// # Returns
     /// `Result<Vec<(usize, usize)>>` which is a vector of 1-based line number ranges.
+    /// Returns an empty vector for non-block patterns.
     fn get_block_range(&self, content: &str) -> Result<Vec<(usize, usize)>>;
 }
-
 
 impl IgnorePattern {
     /// Creates a new `IgnorePattern` from a given type and specification string.
     ///
     /// This constructor handles the conversion of a string `pattern_type` into the
     /// `PatternType` enum and initializes the `compiled_regex` field if needed.
-    /// It also assigns a new UUID to the pattern for identification.
+    /// It also assigns a new, unique UUID to the pattern for identification.
+    ///
+    /// # Arguments
+    /// * `pattern_type`: A string representing the type of pattern (e.g., "line-regex").
+    /// * `specification`: The raw string that defines the pattern itself.
+    ///
+    /// # Returns
+    /// `Result<Self>` which is the new `IgnorePattern` instance, or an error
+    /// if the `pattern_type` string is invalid.
     pub fn new(pattern_type: String, specification: String) -> Result<Self> {
         let pattern_type = match pattern_type.as_str() {
             "line-regex" => PatternType::LineRegex,
@@ -123,8 +144,17 @@ impl IgnorePattern {
     pub fn validate(&self) -> Result<()> {
         match self.pattern_type {
             PatternType::LineRegex => {
-                // Validate that the specification is a valid regular expression.
-                Regex::new(&self.specification).context("Invalid regex pattern")?;
+                // For LineRegex, we now support both direct regex patterns and word-boundary patterns
+                // Try to validate as regex first, but if it fails, treat it as a literal word pattern
+                if self.specification.starts_with('/') && self.specification.ends_with('/') {
+                    // It's a regex pattern enclosed in slashes
+                    let regex_pattern = &self.specification[1..self.specification.len()-1];
+                    Regex::new(regex_pattern).context("Invalid regex pattern")?;
+                } else {
+                    // It's a word/identifier pattern - create word boundary regex to validate
+                    let word_boundary_pattern = format!(r"\b{}\b", regex::escape(&self.specification));
+                    Regex::new(&word_boundary_pattern).context("Invalid word pattern")?;
+                }
             }
             // Validate that the specification is a parsable integer.
             PatternType::LineNumber => {
@@ -157,20 +187,47 @@ impl IgnorePattern {
         }
         Ok(())
     }
+
+    /// Creates the appropriate regex pattern for `LineRegex` matching.
+    ///
+    /// This method handles two cases:
+    /// 1. If the specification is enclosed in slashes (`/pattern/`), it's treated as a raw regex.
+    /// 2. Otherwise, it's treated as a word/identifier that should match with word boundaries.
+    /// This approach ensures a user can define simple word matches without needing to
+    /// know regex syntax.
+    fn create_line_regex_pattern(&self) -> String {
+        if self.specification.starts_with('/') && self.specification.ends_with('/') {
+            // Extract raw regex pattern from between the slashes
+            self.specification[1..self.specification.len()-1].to_string()
+        } else {
+            // Create word boundary pattern for exact word/identifier matching
+            format!(r"\b{}\b", regex::escape(&self.specification))
+        }
+    }
 }
 
 /// Implementation of the `PatternMatcher` trait for the `IgnorePattern` struct.
+/// This trait implementation provides the core matching logic for all pattern types.
 impl PatternMatcher for IgnorePattern {
-    /// Checks a single line against a pattern.
+    /// Checks if a single line of content matches the pattern.
     ///
-    /// The logic here is separated by `PatternType` to handle each case appropriately.
-    /// For example, `LineRegex` compiles and runs a regex, while `LineNumber`
-    /// simply compares the line number.
+    /// This method is intended for line-based patterns (`LineRegex`, `LineNumber`, `LineRange`).
+    /// For block patterns, this method should always return `Ok(false)` as their logic
+    /// is handled by `get_block_range`.
+    ///
+    /// # Arguments
+    /// * `line`: The string slice of the line to check.
+    /// * `line_number`: The 1-based line number of the current line.
+    ///
+    /// # Returns
+    /// `Result<bool>` which is `true` if the line matches, `false` otherwise.
+    /// An `anyhow::Error` is returned if parsing the specification fails.
     fn matches_line(&self, line: &str, line_number: usize) -> Result<bool> {
         match self.pattern_type {
             PatternType::LineRegex => {
-                // Compile the regex and check if the line matches.
-                let regex = Regex::new(&self.specification)?;
+                // Create the appropriate regex pattern based on specification format
+                let regex_pattern = self.create_line_regex_pattern();
+                let regex = Regex::new(&regex_pattern)?;
                 Ok(regex.is_match(line))
             }
             PatternType::LineNumber => {
@@ -194,12 +251,17 @@ impl PatternMatcher for IgnorePattern {
         }
     }
 
-    /// Finds line ranges for `BlockStartEnd` patterns.
+    /// Finds and returns all line number ranges that match a block pattern.
     ///
-    /// This function iterates through the content line by line, searching for
-    /// a start pattern. When a start pattern is found, it begins a nested search
-    /// for the corresponding end pattern. This greedy approach finds the first
-    /// matching end pattern and records the range.
+    /// This method is specifically for `BlockStartEnd` patterns and returns a vector
+    /// of tuples, where each tuple represents a `(start_line, end_line)` range.
+    ///
+    /// # Arguments
+    /// * `content`: The full string content of the file to search.
+    ///
+    /// # Returns
+    /// `Result<Vec<(usize, usize)>>` which is a vector of 1-based line number ranges.
+    /// Returns an empty vector for non-block patterns.
     fn get_block_range(&self, content: &str) -> Result<Vec<(usize, usize)>> {
         // Only proceed if the pattern is `BlockStartEnd`.
         if !matches!(self.pattern_type, PatternType::BlockStartEnd) {
@@ -216,10 +278,6 @@ impl PatternMatcher for IgnorePattern {
 
         let start_pattern = parts[0].trim();
         let end_pattern = parts[1].trim();
-
-        // println!("DEBUG: Start pattern: '{start_pattern}'");
-        // println!("DEBUG: End pattern: '{end_pattern}'");
-
         let mut ranges = Vec::new();
         let lines: Vec<&str> = content.lines().collect();
         let mut i = 0; // The current line index (0-based)
@@ -227,11 +285,6 @@ impl PatternMatcher for IgnorePattern {
         while i < lines.len() {
             // Look for start pattern using contains() for literal string matching
             if lines[i].contains(start_pattern) {
-                // println!(
-                //     "DEBUG: Found start pattern at line {}: '{}'",
-                //     i + 1,
-                //     lines[i]
-                // );
                 let start_line = i + 1; // 1-based line number for the start
 
                 // Look for end pattern
@@ -253,7 +306,6 @@ impl PatternMatcher for IgnorePattern {
                 // If no end pattern was found, the start pattern is ignored.
                 if !found_end {
                     // If no end pattern found, just ignore the start pattern
-                    // println!("DEBUG: No matching end pattern found for start at line {start_line}");
                     i += 1;
                 }
             } else {
@@ -261,7 +313,6 @@ impl PatternMatcher for IgnorePattern {
             }
         }
 
-        // println!("DEBUG: Found {} block ranges: {:?}", ranges.len(), ranges);
         Ok(ranges)
     }
 }
