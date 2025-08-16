@@ -28,6 +28,7 @@ anyhow = "1.0.99"
 # enables `clap` to automatically generate a parser from a Rust struct, which is
 # what is used in `main.rs`.
 clap = { version = "4.5.41", features = ["derive"] }
+colored = "3.0.0"
 # `git2` is a Rust binding for the libgit2 C library. It provides a native
 # interface for interacting with Git repositories, allowing the application to
 # read the Git index and manipulate files in the working directory.
