@@ -1,4 +1,4 @@
-use anyhow::{Result};
+use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 // Import sibling modules. `mod` statements in `main.rs` link the
@@ -6,24 +6,13 @@ use clap::{Parser, Subcommand};
 mod builders;
 mod core;
 mod utils;
-use crate::core::{
-    config::ConfigManager,
-    version::run
-};
+use crate::core::{config::ConfigManager, version::run};
 // Import all public functions from the `utils` module. These functions
 // are the core logic handlers for each command-line action.
 use crate::utils::{
-    add_ignore_pattern,
-    export_patterns,
-    import_patterns,
-    install_hooks,
-    list_patterns,
-    process_post_commit,
-    process_pre_commit,
-    remove_ignore_pattern,
-    show_status,
-    uninstall_hooks,
-    verify_staging_area
+    add_ignore_pattern, export_patterns, import_patterns, install_hooks, list_patterns,
+    process_post_commit, process_pre_commit, remove_ignore_pattern, show_status, uninstall_hooks,
+    verify_staging_area,
 };
 
 /// `Cli` is the main struct that represents the command-line interface.
@@ -140,7 +129,7 @@ enum Commands {
         #[arg(short, long, default_value = "toml")]
         format: String,
     },
-    ///
+    /// Show the version of the tool
     Version,
 }
 
@@ -157,7 +146,10 @@ fn main() -> Result<()> {
     // Perform a configuration validation check for most commands.
     // The `Init` and `InstallHooks` commands are excluded because they
     // are often run before a valid configuration exists.
-    if !matches!(cli.command, Commands::Init | Commands::InstallHooks | Commands::Version) {
+    if !matches!(
+        cli.command,
+        Commands::Init | Commands::InstallHooks | Commands::Version
+    ) {
         let config_manager = ConfigManager::new()?;
         config_manager.validate_config()?;
     }
