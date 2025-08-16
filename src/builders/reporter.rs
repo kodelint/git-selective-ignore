@@ -113,47 +113,118 @@ impl StatusReporter for ConsoleReporter {
         let mut total_ignored_lines = 0;
         let mut files_with_issues = 0;
 
-        // Iterate through each file specified in the configuration.
+        // Count total patterns including global "all" patterns
         for (file_path, patterns) in &config.files {
             total_patterns += patterns.len();
+        }
 
-            // Look up the file's status from the HashMap provided by the `IgnoreEngine`.
-            if let Some(status) = file_statuses.get(file_path) {
-                total_ignored_lines += status.ignored_line_count;
+        // Separate files into specific and "all"-only categories
+        let mut specific_files = Vec::new();
+        let mut all_only_files = Vec::new();
 
-                // Increment the counter for files that don't exist in the working directory.
-                if !status.exists {
-                    files_with_issues += 1;
+        for (file_path, status) in &file_statuses {
+            total_ignored_lines += status.ignored_line_count;
+
+            // Increment the counter for files that don't exist in the working directory.
+            if !status.exists {
+                files_with_issues += 1;
+            }
+
+            // Check if this file has specific configuration or only "all" patterns
+            if config.files.contains_key(file_path) {
+                specific_files.push((file_path, status));
+            } else {
+                // This file is only affected by "all" patterns
+                all_only_files.push((file_path, status));
+            }
+        }
+
+        // Print specifically configured files first
+        if !specific_files.is_empty() {
+            println!("🎯 Specifically Configured Files:");
+            for (file_path, status) in &specific_files {
+                // Calculate how many patterns apply to this file
+                let mut applicable_patterns = Vec::new();
+
+                // Add file-specific patterns
+                if let Some(file_specific_patterns) = config.files.get(*file_path) {
+                    applicable_patterns.extend(file_specific_patterns.clone());
+                }
+
+                // Add global "all" patterns if they exist
+                if let Some(global_patterns) = config.files.get("all") {
+                    applicable_patterns.extend(global_patterns.clone());
                 }
 
                 // Print the formatted status line for the current file.
-                println!("{}", self.format_file_status(file_path, status, patterns));
+                println!(
+                    "{}",
+                    self.format_file_status(file_path, status, &applicable_patterns)
+                );
 
                 // If verbose mode is enabled, print the details of each pattern for the file.
                 if config.global_settings.verbose {
-                    for pattern in patterns {
-                        // The full ID is printed, but can be truncated for brevity if needed (commented out).
+                    for pattern in &applicable_patterns {
                         println!(
                             "  └─ {} ({}): {}",
-                            pattern.id,
-                            pattern.pattern_type,
-                            pattern.specification
+                            pattern.id, pattern.pattern_type, pattern.specification
                         );
                     }
                 }
-            } else {
-                // This case handles a scenario where a file is in the config but no
-                // status data was provided by the engine. This is an edge case.
-                println!("⚠️  {file_path} (status unknown)");
+            }
+            println!(); // Add spacing
+        }
+
+        // Print files affected only by "all" patterns
+        if !all_only_files.is_empty() && config.files.contains_key("all") {
+            println!("🌐 Files Affected by Global 'ALL' Patterns:");
+            let global_patterns = config.files.get("all").unwrap();
+
+            for (file_path, status) in &all_only_files {
+                // Print the formatted status line with only global patterns
+                println!(
+                    "{}",
+                    self.format_file_status(file_path, status, global_patterns)
+                );
+
+                // If verbose mode is enabled, print the details of each pattern for the file.
+                if config.global_settings.verbose {
+                    for pattern in global_patterns {
+                        println!(
+                            "  └─ {} ({}): {}",
+                            pattern.id, pattern.pattern_type, pattern.specification
+                        );
+                    }
+                }
             }
         }
 
         // Print the final summary section.
+        let actual_file_count = file_statuses.len();
+        let files_with_problems = file_statuses
+            .values()
+            .filter(|status| status.has_ignored_lines)
+            .count();
+
         println!("\n📈 Summary:");
-        println!("  Total files: {}", config.files.len());
+        println!("  Total files: {actual_file_count}");
         println!("  Total patterns: {total_patterns}");
         println!("  Total ignored lines: {total_ignored_lines}");
-        println!("  Files with issues: {files_with_issues}");
+        println!("  Files with issues: {files_with_problems}");
+
+        // Show breakdown by category
+        if !specific_files.is_empty() || !all_only_files.is_empty() {
+            println!("\n📋 Breakdown:");
+            if !specific_files.is_empty() {
+                println!("  Specifically configured files: {}", specific_files.len());
+            }
+            if !all_only_files.is_empty() {
+                println!(
+                    "  Files affected by 'ALL' patterns only: {}",
+                    all_only_files.len()
+                );
+            }
+        }
 
         // Provide a hint to the user if any files had issues (e.g., didn't exist).
         if files_with_issues > 0 {
