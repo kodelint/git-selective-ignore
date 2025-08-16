@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use colored::Colorize;
 use git2::{DiffOptions, Index, Repository};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 
@@ -90,22 +90,37 @@ impl IgnoreEngine {
         for file_path in staged_files.iter() {
             let file_path_str = file_path.to_string_lossy().to_string();
 
-            if let Some(patterns) = config.files.get(&file_path_str) {
+            // Collect all patterns that apply to this file
+            let mut all_patterns = Vec::new();
+
+            // First, add patterns from files.all if they exist
+            if let Some(global_patterns) = config.files.get("all") {
+                all_patterns.extend(global_patterns.clone());
+            }
+
+            // Then, add file-specific patterns if they exist
+            if let Some(file_specific_patterns) = config.files.get(&file_path_str) {
+                all_patterns.extend(file_specific_patterns.clone());
+            }
+
+            // Only process the file if there are patterns to apply
+            if !all_patterns.is_empty() {
                 // Display file header
                 println!("\n📄 Processing file: {}", file_path_str.bright_cyan());
-                println!("   └─ Found {} ignore pattern(s) installed", patterns.len().to_string().blue());
+                println!("   └─ Found {} ignore pattern(s) installed", all_patterns.len().to_string().blue());
+
                 // Read content from index to get the staged version of the file
                 let entry = index.get_path(file_path, 0).ok_or_else(|| {
                     anyhow!(
-                        "Failed to get staged file entry for {}",
-                        file_path.display()
-                    )
+                    "Failed to get staged file entry for {}",
+                    file_path.display()
+                )
                 })?;
                 let blob = self.repo.find_blob(entry.id)?;
                 let original_content = std::str::from_utf8(blob.content())?;
 
                 let (cleaned_content, ignored_lines) =
-                    self.process_file_content(original_content, patterns, &file_path_str)?;
+                    self.process_file_content(original_content, &all_patterns, &file_path_str)?;
 
                 if cleaned_content != original_content {
                     // Create a backup of the original staged file content
@@ -150,8 +165,16 @@ impl IgnoreEngine {
         println!("🔄 Restoring files after commit...");
         let config = self.config_manager.load_config()?;
 
-        // Iterate through all files that have ignored patterns in the configuration
+        // We need to restore files that had backups created during pre-commit
+        // This could be files with specific patterns OR files affected by "all" patterns
+
+        // First, handle files with specific configurations
         for file_path in config.files.keys() {
+            // Skip the "all" key since it's not a real file path
+            if file_path == "all" {
+                continue;
+            }
+
             let path = Path::new(file_path);
 
             if let Some(backup_data) = self.storage.restore_backup(file_path)? {
@@ -165,6 +188,36 @@ impl IgnoreEngine {
                     println!(
                         "⚠️ Skipping restore for {file_path} - file was modified after pre-commit"
                     );
+                }
+            }
+        }
+
+        // If there are "all" patterns, we need to check for any other backed up files
+        // that weren't in the specific file list (this handles files that were only
+        // affected by "all" patterns)
+        if config.files.contains_key("all") {
+            // Get all backup keys from storage and restore any that weren't already handled
+            let all_backup_keys = self.storage.get_all_backup_keys()?;
+            let specific_file_keys: HashSet<String> = config.files.keys()
+                .filter(|&k| k != "all")
+                .cloned()
+                .collect();
+
+            for backup_key in all_backup_keys {
+                if !specific_file_keys.contains(&backup_key) {
+                    let path = Path::new(&backup_key);
+
+                    if let Some(backup_data) = self.storage.restore_backup(&backup_key)? {
+                        let current_content = fs::read_to_string(path)?;
+                        if calculate_hash(&current_content) == backup_data.cleaned_file_hash {
+                            fs::write(path, &backup_data.original_content)?;
+                            println!("✓ Restored {backup_key}");
+                        } else {
+                            println!(
+                                "⚠️ Skipping restore for {backup_key} - file was modified after pre-commit"
+                            );
+                        }
+                    }
                 }
             }
         }
@@ -231,19 +284,33 @@ impl IgnoreEngine {
         for file_path in staged_files {
             let file_path_str = file_path.to_string_lossy().to_string();
 
-            if let Some(patterns) = config.files.get(&file_path_str) {
+            // Collect all patterns that apply to this file
+            let mut all_patterns = Vec::new();
+
+            // First, add patterns from files.all if they exist
+            if let Some(global_patterns) = config.files.get("all") {
+                all_patterns.extend(global_patterns.clone());
+            }
+
+            // Then, add file-specific patterns if they exist
+            if let Some(file_specific_patterns) = config.files.get(&file_path_str) {
+                all_patterns.extend(file_specific_patterns.clone());
+            }
+
+            // Only verify if there are patterns to check
+            if !all_patterns.is_empty() {
                 // Read content from index to get the staged version
                 let entry = index.get_path(&file_path, 0).ok_or_else(|| {
                     anyhow!(
-                        "Failed to get staged file entry for {}",
-                        file_path.display()
-                    )
+                    "Failed to get staged file entry for {}",
+                    file_path.display()
+                )
                 })?;
                 let blob = self.repo.find_blob(entry.id)?;
                 let content = std::str::from_utf8(blob.content())?;
 
                 // Check for ignored patterns in the staged content
-                for pattern in patterns {
+                for pattern in &all_patterns {
                     let (_, ignored_lines) =
                         self.process_file_content(content, &vec![pattern.clone()], &file_path_str)?;
                     if !ignored_lines.is_empty() {
