@@ -200,8 +200,12 @@ impl IgnorePattern {
             // Extract raw regex pattern from between the slashes
             self.specification[1..self.specification.len()-1].to_string()
         } else {
-            // Create word boundary pattern for exact word/identifier matching
-            format!(r"\b{}\b", regex::escape(&self.specification))
+            // Create hardcoded assignment detection pattern that handles various contexts
+            let var_name = regex::escape(&self.specification);
+            format!(
+                r#"\b{}\s*=\s*(?:"[^"]+"|'[^']+')"#,
+                var_name
+            )
         }
     }
 }
