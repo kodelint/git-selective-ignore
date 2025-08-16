@@ -1,13 +1,13 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use colored::Colorize;
 use git2::{DiffOptions, Index, Repository};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 
-use crate::builders::storage::{BackupData, MemoryStorage, StorageProvider, TempFileStorage};
 use crate::builders::patterns::{IgnorePattern, PatternMatcher, PatternType};
 use crate::builders::reporter::{ConsoleReporter, FileStatus, StatusReporter};
+use crate::builders::storage::{BackupData, MemoryStorage, StorageProvider, TempFileStorage};
 use crate::core::config::{BackupStrategy, ConfigManager, ConfigProvider};
 
 /// The `IgnoreEngine` is the central component responsible for managing the selective
@@ -79,7 +79,10 @@ impl IgnoreEngine {
     /// directory file, so it must be added back to the index to include the
     /// "cleaned" version in the commit.
     pub fn process_pre_commit(&mut self) -> Result<()> {
-        println!("{}", "📝 Processing files with selective ignore patterns...".yellow());
+        println!(
+            "{}",
+            "📝 Processing files with selective ignore patterns...".yellow()
+        );
         let config = self.config_manager.load_config()?;
         let mut index = self.repo.index()?;
 
@@ -107,14 +110,17 @@ impl IgnoreEngine {
             if !all_patterns.is_empty() {
                 // Display file header
                 println!("\n📄 Processing file: {}", file_path_str.bright_cyan());
-                println!("   └─ Found {} ignore pattern(s) installed", all_patterns.len().to_string().blue());
+                println!(
+                    "   └─ Found {} ignore pattern(s) installed",
+                    all_patterns.len().to_string().blue()
+                );
 
                 // Read content from index to get the staged version of the file
                 let entry = index.get_path(file_path, 0).ok_or_else(|| {
                     anyhow!(
-                    "Failed to get staged file entry for {}",
-                    file_path.display()
-                )
+                        "Failed to get staged file entry for {}",
+                        file_path.display()
+                    )
                 })?;
                 let blob = self.repo.find_blob(entry.id)?;
                 let original_content = std::str::from_utf8(blob.content())?;
@@ -198,7 +204,9 @@ impl IgnoreEngine {
         if config.files.contains_key("all") {
             // Get all backup keys from storage and restore any that weren't already handled
             let all_backup_keys = self.storage.get_all_backup_keys()?;
-            let specific_file_keys: HashSet<String> = config.files.keys()
+            let specific_file_keys: HashSet<String> = config
+                .files
+                .keys()
                 .filter(|&k| k != "all")
                 .cloned()
                 .collect();
@@ -237,13 +245,45 @@ impl IgnoreEngine {
     /// into the state of the files managed by the selective ignore tool. It checks
     /// for file existence, total lines, and how many lines would be ignored based
     /// on the current configuration.
+    ///
     pub fn show_status(&mut self) -> Result<()> {
         let config = self.config_manager.load_config()?;
         let mut file_statuses = HashMap::new();
         let reporter = ConsoleReporter::new();
 
-        for (file_path, patterns) in &config.files {
-            let path = Path::new(file_path);
+        // Get all files that could be affected
+        let mut files_to_check = std::collections::HashSet::new();
+
+        // Add explicitly configured files (excluding "all")
+        for file_path in config.files.keys() {
+            if file_path != "all" {
+                files_to_check.insert(file_path.clone());
+            }
+        }
+
+        // If there are "all" patterns, we need to find files they could apply to
+        if config.files.contains_key("all") {
+            // Get all tracked files in the repository
+            let mut index = self.repo.index()?;
+            let entry_count = index.len();
+            for i in 0..entry_count {
+                if let Some(entry) = index.get(i) {
+                    if let Ok(path_str) = std::str::from_utf8(&*entry.path) {
+                        files_to_check.insert(path_str.to_string());
+                    }
+                }
+            }
+
+            // Also check staged files if any
+            let staged_files = self.get_staged_files(&mut index)?;
+            for staged_file in staged_files {
+                files_to_check.insert(staged_file.to_string_lossy().to_string());
+            }
+        }
+
+        // Process each file
+        for file_path in files_to_check {
+            let path = Path::new(&file_path);
             let mut status = FileStatus {
                 exists: path.exists(),
                 has_ignored_lines: false,
@@ -254,13 +294,35 @@ impl IgnoreEngine {
             if status.exists {
                 let content = fs::read_to_string(path)?;
                 status.total_lines = content.lines().count();
-                let (_, ignored_lines) = self.process_file_content(&content, patterns, file_path)?;
-                if !ignored_lines.is_empty() {
-                    status.has_ignored_lines = true;
-                    status.ignored_line_count = ignored_lines.len();
+
+                // Collect all patterns that apply to this file
+                let mut all_patterns = Vec::new();
+
+                // Add file-specific patterns if they exist
+                if let Some(file_specific_patterns) = config.files.get(&file_path) {
+                    all_patterns.extend(file_specific_patterns.clone());
+                }
+
+                // Add global "all" patterns if they exist
+                if let Some(global_patterns) = config.files.get("all") {
+                    all_patterns.extend(global_patterns.clone());
+                }
+
+                // Only process if there are patterns to apply
+                if !all_patterns.is_empty() {
+                    let (_, ignored_lines) =
+                        self.process_file_content(&content, &all_patterns, &file_path)?;
+                    if !ignored_lines.is_empty() {
+                        status.has_ignored_lines = true;
+                        status.ignored_line_count = ignored_lines.len();
+                    }
                 }
             }
-            file_statuses.insert(file_path.clone(), status);
+
+            // Only add to status if the file has patterns AND has ignored lines (problems)
+            if status.has_ignored_lines {
+                file_statuses.insert(file_path, status);
+            }
         }
 
         reporter.generate_status_report(&config, file_statuses)?;
@@ -302,9 +364,9 @@ impl IgnoreEngine {
                 // Read content from index to get the staged version
                 let entry = index.get_path(&file_path, 0).ok_or_else(|| {
                     anyhow!(
-                    "Failed to get staged file entry for {}",
-                    file_path.display()
-                )
+                        "Failed to get staged file entry for {}",
+                        file_path.display()
+                    )
                 })?;
                 let blob = self.repo.find_blob(entry.id)?;
                 let content = std::str::from_utf8(blob.content())?;
@@ -473,8 +535,12 @@ impl IgnoreEngine {
                     PatternType::BlockStartEnd => "Block",
                 };
 
-                println!("   ├─ {} Pattern '{}': {} line(s) matched",
-                         pattern_type_str, pattern.specification, matched_lines.len());
+                println!(
+                    "   ├─ {} Pattern '{}': {} line(s) matched",
+                    pattern_type_str,
+                    pattern.specification,
+                    matched_lines.len()
+                );
 
                 // Group consecutive line numbers for better display
                 let grouped_lines = Self::group_consecutive_lines(matched_lines);
@@ -483,7 +549,6 @@ impl IgnoreEngine {
                         println!("   │  └─ Line {}", group[0]);
                     } else {
                         println!("   │  └─ Lines {}-{}", group[0], group[group.len() - 1]);
-
                     }
                 }
             }
@@ -493,8 +558,13 @@ impl IgnoreEngine {
             let total_lines = lines.len();
             let remaining_lines = total_lines - total_ignored;
 
-            println!("   └─ {}: {} line(s) ignored, {} line(s) remaining (of {} total)",
-                     "Summary".bright_green().bold(), total_ignored, remaining_lines, total_lines);
+            println!(
+                "   └─ {}: {} line(s) ignored, {} line(s) remaining (of {} total)",
+                "Summary".bright_green().bold(),
+                total_ignored,
+                remaining_lines,
+                total_lines
+            );
         } else {
             println!("   └─ No lines matched any patterns");
         }
