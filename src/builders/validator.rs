@@ -114,7 +114,7 @@ impl ConfigValidator for StandardValidator {
 
         // Iterate through each file and its patterns for validation.
         for (file_path, patterns) in &config.files {
-            if !self.check_file_exists(file_path) {
+            if file_path != "all" && !self.check_file_exists(file_path) {
                 issues.push(format!("File not found: {file_path}"));
             }
 
