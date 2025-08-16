@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use colored::Colorize;
 use git2::{DiffOptions, Index, Repository};
 use std::collections::HashMap;
 use std::fs;
@@ -70,7 +71,7 @@ impl IgnoreEngine {
     /// The main entry point for the `pre-commit` Git hook.
     ///
     /// This function orchestrates the process of modifying staged files. It identifies
-    /// staged files that have ignore patterns configured, removes the ignored content,
+    /// staged files that have ignored patterns configured, removes the ignored content,
     /// backs up the original content, writes the cleaned content to the working directory,
     /// and finally, re-stages the modified files.
     ///
@@ -78,7 +79,7 @@ impl IgnoreEngine {
     /// directory file, so it must be added back to the index to include the
     /// "cleaned" version in the commit.
     pub fn process_pre_commit(&mut self) -> Result<()> {
-        println!("📝 Processing files with selective ignore patterns...");
+        println!("{}", "📝 Processing files with selective ignore patterns...".yellow());
         let config = self.config_manager.load_config()?;
         let mut index = self.repo.index()?;
 
@@ -90,6 +91,9 @@ impl IgnoreEngine {
             let file_path_str = file_path.to_string_lossy().to_string();
 
             if let Some(patterns) = config.files.get(&file_path_str) {
+                // Display file header
+                println!("\n📄 Processing file: {}", file_path_str.bright_cyan());
+                println!("   └─ Found {} ignore pattern(s) installed", patterns.len().to_string().blue());
                 // Read content from index to get the staged version of the file
                 let entry = index.get_path(file_path, 0).ok_or_else(|| {
                     anyhow!(
@@ -101,7 +105,7 @@ impl IgnoreEngine {
                 let original_content = std::str::from_utf8(blob.content())?;
 
                 let (cleaned_content, ignored_lines) =
-                    self.process_file_content(original_content, patterns)?;
+                    self.process_file_content(original_content, patterns, &file_path_str)?;
 
                 if cleaned_content != original_content {
                     // Create a backup of the original staged file content
@@ -124,7 +128,7 @@ impl IgnoreEngine {
 
         // Re-add any files that were modified by the hook
         if !files_to_add_after_processing.is_empty() {
-            println!("🔄 Re-staging modified files...");
+            println!("\n🔄 Re-staging modified files...");
             for path in files_to_add_after_processing {
                 index.add_path(&path)?;
             }
@@ -146,7 +150,7 @@ impl IgnoreEngine {
         println!("🔄 Restoring files after commit...");
         let config = self.config_manager.load_config()?;
 
-        // Iterate through all files that have ignore patterns in the configuration
+        // Iterate through all files that have ignored patterns in the configuration
         for file_path in config.files.keys() {
             let path = Path::new(file_path);
 
@@ -197,7 +201,7 @@ impl IgnoreEngine {
             if status.exists {
                 let content = fs::read_to_string(path)?;
                 status.total_lines = content.lines().count();
-                let (_, ignored_lines) = self.process_file_content(&content, patterns)?;
+                let (_, ignored_lines) = self.process_file_content(&content, patterns, file_path)?;
                 if !ignored_lines.is_empty() {
                     status.has_ignored_lines = true;
                     status.ignored_line_count = ignored_lines.len();
@@ -241,7 +245,7 @@ impl IgnoreEngine {
                 // Check for ignored patterns in the staged content
                 for pattern in patterns {
                     let (_, ignored_lines) =
-                        self.process_file_content(content, &vec![pattern.clone()])?;
+                        self.process_file_content(content, &vec![pattern.clone()], &file_path_str)?;
                     if !ignored_lines.is_empty() {
                         violations.push(format!(
                             "  - In file {}: pattern '{}' is present.",
@@ -276,7 +280,7 @@ impl IgnoreEngine {
     /// 3. As a fallback, it iterates through all entries in the index directly. This
     ///    is a less efficient but reliable method for covering all edge cases.
     fn get_staged_files(&self, index: &mut Index) -> Result<Vec<std::path::PathBuf>> {
-        println!("Getting staged files...");
+        // println!("Getting staged files...");
         let mut staged_files = Vec::new();
         let mut options = DiffOptions::new();
 
@@ -290,7 +294,6 @@ impl IgnoreEngine {
                     Some(&mut options),
                 )?;
 
-                // println!("DEBUG: Found {} deltas in diff", diff.deltas().len());
                 // Iterate through the diff deltas to find new and modified files.
                 for delta in diff.deltas() {
                     if let Some(path) = delta.new_file().path() {
@@ -301,7 +304,6 @@ impl IgnoreEngine {
             }
         } else {
             // Method 2: For the initial commit, diff against an empty tree.
-            // println!("DEBUG: No HEAD found (initial commit), using diff from empty tree");
             // For initial commit, diff against empty tree
             let empty_tree = self.repo.treebuilder(None)?.write()?;
             let empty_tree_obj = self.repo.find_tree(empty_tree)?;
@@ -311,10 +313,8 @@ impl IgnoreEngine {
                 Some(&mut options),
             )?;
 
-            // println!("DEBUG: Found {} deltas in empty tree diff", diff.deltas().len());
             for delta in diff.deltas() {
                 if let Some(path) = delta.new_file().path() {
-                    // println!("DEBUG: Staged file from empty tree diff: {}", path.display());
                     staged_files.push(path.to_path_buf());
                 }
             }
@@ -324,23 +324,14 @@ impl IgnoreEngine {
         // didn't find any staged files. This handles cases where a file might be
         // staged but not yet committed, and no HEAD exists.
         if staged_files.is_empty() {
-            // println!("DEBUG: No files from diff, checking index entries directly");
             let entry_count = index.len();
-            // println!("DEBUG: Index has {entry_count} entries");
-
             for i in 0..entry_count {
                 if let Some(entry) = index.get(i) {
                     let path = std::path::PathBuf::from(std::str::from_utf8(&*entry.path)?);
-                    // println!("DEBUG: Index entry: {}", path.display());
                     staged_files.push(path);
                 }
             }
         }
-
-        // println!("DEBUG: Total staged files: {}", staged_files.len());
-        // for file in &staged_files {
-        //     println!("DEBUG: Staged file: {}", file.display());
-        // }
 
         Ok(staged_files)
     }
@@ -355,58 +346,93 @@ impl IgnoreEngine {
     /// # Arguments
     /// * `content`: The string content of the file to be processed.
     /// * `patterns`: A slice of `IgnorePattern`s to apply.
+    /// * `file_path`: The path of the file being processed (for logging purposes).
     ///
     /// # Returns
     /// A `Result<(String, HashMap<usize, String>)>` where the first element is the
     /// new, cleaned content, and the second is a map of the zero-based line numbers
     /// and their original content that was ignored.
-    /// Enhanced process_file_content that handles blank lines intelligently
     fn process_file_content(
         &self,
         content: &str,
         patterns: &[IgnorePattern],
+        file_path: &str,
     ) -> Result<(String, HashMap<usize, String>)> {
         let lines: Vec<String> = content.lines().map(String::from).collect();
         let mut lines_to_ignore = HashMap::new();
+        let mut pattern_matches = Vec::new(); // Track matches per pattern for summary
 
         // Step 1: Identify all lines to ignore based on patterns
         for pattern in patterns {
+            let mut current_pattern_matches = Vec::new();
+
             match pattern.pattern_type {
                 PatternType::LineRegex | PatternType::LineNumber | PatternType::LineRange => {
-                    println!(
-                        "Processing Line Pattern: {} (Type: {:?})",
-                        pattern.specification, pattern.pattern_type
-                    );
                     for (i, line) in lines.iter().enumerate() {
                         if pattern.matches_line(line, i + 1)? {
-                            // println!("DEBUG: Ignoring line {}: '{}'", i + 1, line);
                             lines_to_ignore.insert(i, line.clone());
+                            current_pattern_matches.push(i + 1); // Store 1-based line numbers for display
                         }
                     }
                 }
                 PatternType::BlockStartEnd => {
-                    println!(
-                        "Processing BlockStartEnd pattern: {}",
-                        pattern.specification
-                    );
                     let ranges = pattern.get_block_range(content)?;
-                    println!("Found {} block ranges", ranges.len());
                     for (start, end) in ranges {
-                        println!("Block range: {} to {}", start, end);
                         for i in start..=end {
                             if i > 0 && i <= lines.len() {
                                 let zero_based_index = i - 1;
-                                println!("Ignoring line {}: {}", i, lines[zero_based_index]);
                                 lines_to_ignore
                                     .insert(zero_based_index, lines[zero_based_index].clone());
+                                current_pattern_matches.push(i); // Store 1-based line numbers for display
                             }
                         }
                     }
                 }
             }
+
+            // Store pattern match summary
+            if !current_pattern_matches.is_empty() {
+                pattern_matches.push((pattern, current_pattern_matches));
+            }
         }
 
-        // Step 2: Build the clean content by filtering out ignored lines
+        // Step 2: Display pattern-wise summary for this file
+        if !pattern_matches.is_empty() {
+            for (pattern, matched_lines) in &pattern_matches {
+                let pattern_type_str = match pattern.pattern_type {
+                    PatternType::LineRegex => "Regex",
+                    PatternType::LineNumber => "Line Number",
+                    PatternType::LineRange => "Line Range",
+                    PatternType::BlockStartEnd => "Block",
+                };
+
+                println!("   ├─ {} Pattern '{}': {} line(s) matched",
+                         pattern_type_str, pattern.specification, matched_lines.len());
+
+                // Group consecutive line numbers for better display
+                let grouped_lines = Self::group_consecutive_lines(matched_lines);
+                for group in grouped_lines {
+                    if group.len() == 1 {
+                        println!("   │  └─ Line {}", group[0]);
+                    } else {
+                        println!("   │  └─ Lines {}-{}", group[0], group[group.len() - 1]);
+
+                    }
+                }
+            }
+
+            // Show overall summary for this file
+            let total_ignored = lines_to_ignore.len();
+            let total_lines = lines.len();
+            let remaining_lines = total_lines - total_ignored;
+
+            println!("   └─ {}: {} line(s) ignored, {} line(s) remaining (of {} total)",
+                     "Summary".bright_green().bold(), total_ignored, remaining_lines, total_lines);
+        } else {
+            println!("   └─ No lines matched any patterns");
+        }
+
+        // Step 3: Build the clean content by filtering out ignored lines
         let kept_lines: Vec<&str> = lines
             .iter()
             .enumerate()
@@ -419,7 +445,7 @@ impl IgnoreEngine {
             })
             .collect();
 
-        // Step 3: Clean up excessive blank lines that result from content removal
+        // Step 4: Clean up excessive blank lines that result from content removal
         let mut cleaned_lines = Vec::new();
         let mut prev_line_was_blank = false;
 
@@ -448,19 +474,35 @@ impl IgnoreEngine {
             new_content.push('\n');
         }
 
-        // Debug: Show what we're removing
-        if !lines_to_ignore.is_empty() {
-            println!(
-                "Lines to ignore: {:?}",
-                lines_to_ignore.keys().collect::<Vec<_>>()
-            );
-            println!("Original content length: {}", content.len());
-            println!("New content length: {}", new_content.len());
-            println!("Original line count: {}", lines.len());
-            println!("New line count: {}", cleaned_lines.len());
+        Ok((new_content, lines_to_ignore))
+    }
+
+    /// Helper function to group consecutive line numbers for better display
+    fn group_consecutive_lines(lines: &[usize]) -> Vec<Vec<usize>> {
+        if lines.is_empty() {
+            return vec![];
         }
 
-        Ok((new_content, lines_to_ignore))
+        let mut sorted_lines = lines.to_vec();
+        sorted_lines.sort();
+
+        let mut groups = vec![];
+        let mut current_group = vec![sorted_lines[0]];
+
+        for &line in &sorted_lines[1..] {
+            if line == current_group.last().unwrap() + 1 {
+                // Consecutive line
+                current_group.push(line);
+            } else {
+                // Gap found, start new group
+                groups.push(current_group);
+                current_group = vec![line];
+            }
+        }
+
+        // Don't forget the last group
+        groups.push(current_group);
+        groups
     }
 }
 
