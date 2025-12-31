@@ -17,7 +17,7 @@ pub trait PatternImporter {
     /// * `import_type`: The type of format to parse (e.g., "gitignore", "custom").
     ///
     /// # Returns
-    /// A `Result<HashMap<String, Vec<IgnorePattern>>>`. The HashMap maps file paths
+    /// A `Result<HashMap<String, Vec<IgnorePattern>>>`. The `HashMap` maps file paths
     /// to a vector of `IgnorePattern`s, ready to be merged into the main configuration.
     fn import_from_file(
         &mut self,
@@ -65,7 +65,7 @@ impl PatternImporter for FileImporter {
                 let target_file = target_file.trim().to_string();
 
                 // Parse the gitignore-style content.
-                let patterns = self.parse_gitignore_style(&content, &target_file)?;
+                let patterns = Self::parse_gitignore_style(&content, &target_file)?;
                 let mut result = HashMap::new();
                 // Associate all the parsed patterns with the single `target_file`.
                 result.insert(target_file, patterns);
@@ -74,13 +74,14 @@ impl PatternImporter for FileImporter {
             // The custom format already contains file paths, so we can directly
             // parse the content and return the result. The `_` arm
             // acts as a default for any unrecognized type.
-            _ => self.parse_custom_format(&content),
+            _ => Self::parse_custom_format(&content),
         }
     }
 }
 
 impl FileImporter {
     /// Constructs a new `FileImporter` instance.
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -98,7 +99,6 @@ impl FileImporter {
     /// # Returns
     /// A `Result<Vec<IgnorePattern>>` containing the converted patterns.
     fn parse_gitignore_style(
-        &self,
         content: &str,
         _target_file: &str,
     ) -> Result<Vec<IgnorePattern>> {
@@ -114,7 +114,7 @@ impl FileImporter {
             // Convert `.gitignore` style glob patterns into regular expressions.
             // '*' is replaced with '.*' to match any sequence of characters.
             // '?' is replaced with '.' to match any single character.
-            let regex_pattern = line.replace("*", ".*").replace("?", ".");
+            let regex_pattern = line.replace('*', ".*").replace('?', ".");
             // Create a new `IgnorePattern` with the `LineRegex` type.
             patterns.push(IgnorePattern::new("line-regex".to_string(), regex_pattern)?);
         }
@@ -136,7 +136,7 @@ impl FileImporter {
     /// # Returns
     /// A `Result<HashMap<String, Vec<IgnorePattern>>>` mapping file paths to
     /// their respective patterns.
-    fn parse_custom_format(&self, content: &str) -> Result<HashMap<String, Vec<IgnorePattern>>> {
+    fn parse_custom_format(content: &str) -> Result<HashMap<String, Vec<IgnorePattern>>> {
         let mut result = HashMap::new();
         let mut current_file = String::new();
 

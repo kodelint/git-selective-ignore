@@ -56,3 +56,4 @@ uuid = { version = "1.18.0", features = ["v4", "serde"] }
 # This section is for dependencies that are only used during development,
 # such as for writing tests or benchmarks.
 [dev-dependencies]
+tempfile = "3.10.1"

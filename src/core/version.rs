@@ -120,7 +120,7 @@ pub fn run() {
         Err(e) => {
             println!(
                 "{}",
-                format!("Could not determine local version: {}", e)
+                format!("Could not determine local version: {e}")
                     .red()
                     .bold()
             );

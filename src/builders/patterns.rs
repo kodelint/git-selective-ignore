@@ -319,3 +319,53 @@ impl PatternMatcher for IgnorePattern {
         Ok(ranges)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_regex_pattern_matching() {
+        let pattern = IgnorePattern::new("line-regex".to_string(), "/^debug/".to_string()).unwrap();
+        assert!(pattern.matches_line("debug: something happened", 1).unwrap());
+        assert!(!pattern.matches_line("info: something happened", 2).unwrap());
+    }
+
+    #[test]
+    fn test_word_assignment_pattern_matching() {
+        let pattern = IgnorePattern::new("line-regex".to_string(), "api_key".to_string()).unwrap();
+        assert!(pattern.matches_line("api_key = \"secret\"", 1).unwrap());
+        assert!(pattern.matches_line("  api_key = 'another-secret' ", 2).unwrap());
+        assert!(!pattern.matches_line("not_an_api_key = \"val\"", 3).unwrap());
+    }
+
+    #[test]
+    fn test_line_number_matching() {
+        let pattern = IgnorePattern::new("line-number".to_string(), "5".to_string()).unwrap();
+        assert!(pattern.matches_line("any content", 5).unwrap());
+        assert!(!pattern.matches_line("any content", 4).unwrap());
+    }
+
+    #[test]
+    fn test_line_range_matching() {
+        let pattern = IgnorePattern::new("line-range".to_string(), "10-20".to_string()).unwrap();
+        assert!(pattern.matches_line("line 10", 10).unwrap());
+        assert!(pattern.matches_line("line 15", 15).unwrap());
+        assert!(pattern.matches_line("line 20", 20).unwrap());
+        assert!(!pattern.matches_line("line 9", 9).unwrap());
+        assert!(!pattern.matches_line("line 21", 21).unwrap());
+    }
+
+    #[test]
+    fn test_block_pattern_matching() {
+        let pattern = IgnorePattern::new(
+            "block-start-end".to_string(),
+            "BEGIN DEBUG|||END DEBUG".to_string(),
+        )
+        .unwrap();
+        let content = "line 1\nBEGIN DEBUG\nline 3\nline 4\nEND DEBUG\nline 6";
+        let ranges = pattern.get_block_range(content).unwrap();
+        assert_eq!(ranges.len(), 1);
+        assert_eq!(ranges[0], (2, 5));
+    }
+}

@@ -1,11 +1,11 @@
+use crate::builders::importer::{FileImporter, PatternImporter};
+use crate::builders::patterns::IgnorePattern;
+use crate::builders::validator::{ConfigValidator, StandardValidator};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use crate::builders::importer::{FileImporter, PatternImporter};
-use crate::builders::patterns::IgnorePattern;
-use crate::builders::validator::{ConfigValidator, StandardValidator};
 
 /// `GlobalSettings` holds application-wide configuration options.
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -92,6 +92,11 @@ impl ConfigManager {
     /// Creates a new `ConfigManager` instance.
     pub fn new() -> Result<Self> {
         let repo_root = find_git_root()?;
+        Self::new_at(repo_root)
+    }
+
+    /// Creates a new `ConfigManager` instance for a specific repository root.
+    pub fn new_at(repo_root: PathBuf) -> Result<Self> {
         let config_path = repo_root.join(".git").join("selective-ignore.toml");
 
         // Determine global config path
@@ -187,7 +192,7 @@ impl ConfigManager {
 
         if config.files.is_empty() {
             println!("No ignore patterns configured.");
-            return Ok(())
+            return Ok(());
         }
 
         for (file_path, patterns) in &config.files {
@@ -292,8 +297,8 @@ impl ConfigProvider for ConfigManager {
 
         // 2. Load local config (higher priority)
         if self.config_path.exists() {
-            let content =
-                fs::read_to_string(&self.config_path).context("Failed to read local config file")?;
+            let content = fs::read_to_string(&self.config_path)
+                .context("Failed to read local config file")?;
             let local_config: SelectiveIgnoreConfig =
                 toml::from_str(&content).context("Failed to parse local config file")?;
 

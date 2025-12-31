@@ -1,16 +1,9 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-
-// Import sibling modules. `mod` statements in `main.rs` link the
-// modules defined in `src/` to the main crate.
-mod builders;
-mod core;
-mod utils;
-use crate::core::{config::ConfigManager, version::run};
-// Import all public functions from the `utils` module. These functions
-// are the core logic handlers for each command-line action.
-use crate::utils::{
-    add_ignore_pattern, export_patterns, import_patterns, install_hooks, list_patterns,
+use git_selective_ignore::core::config::ConfigManager;
+use git_selective_ignore::core::version::run;
+use git_selective_ignore::utils::{
+    self, add_ignore_pattern, export_patterns, import_patterns, install_hooks, list_patterns,
     process_post_commit, process_pre_commit, remove_ignore_pattern, show_status, uninstall_hooks,
     verify_staging_area,
 };

@@ -42,6 +42,7 @@ pub struct StandardValidator;
 
 impl StandardValidator {
     /// Creates a new instance of `StandardValidator`.
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -56,7 +57,7 @@ impl StandardValidator {
     ///
     /// # Returns
     /// `true` if the file exists, `false` otherwise.
-    fn check_file_exists(&self, file_path: &str) -> bool {
+    fn check_file_exists(file_path: &str) -> bool {
         std::path::Path::new(file_path).exists()
     }
 
@@ -71,7 +72,7 @@ impl StandardValidator {
     ///
     /// # Returns
     /// A `Vec<String>` containing warnings for any conflicts found.
-    fn check_pattern_conflicts(&self, patterns: &[patterns::IgnorePattern]) -> Vec<String> {
+    fn check_pattern_conflicts(patterns: &[patterns::IgnorePattern]) -> Vec<String> {
         let mut warnings = Vec::new();
         let mut line_numbers = HashSet::new();
 
@@ -82,8 +83,7 @@ impl StandardValidator {
                 // Check if a pattern for this line number has already been seen.
                 if line_numbers.contains(&line_num) {
                     warnings.push(format!(
-                        "Duplicate line number pattern for line {}",
-                        line_num
+                        "Duplicate line number pattern for line {line_num}",
                     ));
                 }
                 line_numbers.insert(line_num);
@@ -111,12 +111,12 @@ impl ConfigValidator for StandardValidator {
 
         // Iterate through each file and its patterns for validation.
         for (file_path, patterns) in &config.files {
-            if file_path != "all" && !self.check_file_exists(file_path) {
+            if file_path != "all" && !Self::check_file_exists(file_path) {
                 issues.push(format!("File not found: {file_path}"));
             }
 
             // Check for pattern conflicts within the file's patterns.
-            let conflicts = self.check_pattern_conflicts(patterns);
+            let conflicts = Self::check_pattern_conflicts(patterns);
             issues.extend(conflicts);
 
             // Validate each pattern's syntax and semantics.
