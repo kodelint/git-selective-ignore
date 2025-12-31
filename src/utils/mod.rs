@@ -1,7 +1,7 @@
-use crate::core::config::ConfigManager;
-use anyhow::Result;
 use crate::builders::hooks;
+use crate::core::config::ConfigManager;
 use crate::core::engine::IgnoreEngine;
+use anyhow::Result;
 
 /// Initializes the selective ignore configuration for a new repository.
 ///
@@ -91,7 +91,7 @@ pub fn process_post_commit() -> Result<()> {
 /// commit, without manual intervention.
 pub fn install_hooks() -> Result<()> {
     let config_manager = get_config_manager()?;
-    hooks::install_git_hooks(&config_manager.get_repo_root())?;
+    hooks::install_git_hooks(config_manager.get_repo_root())?;
     println!("✓ Installed Git hooks for automatic processing");
     Ok(())
 }
@@ -102,7 +102,7 @@ pub fn install_hooks() -> Result<()> {
 /// to revert to standard Git behavior.
 pub fn uninstall_hooks() -> Result<()> {
     let config_manager = get_config_manager()?;
-    hooks::uninstall_git_hooks(&config_manager.get_repo_root())?;
+    hooks::uninstall_git_hooks(config_manager.get_repo_root())?;
     println!("✓ Uninstalled Git hooks");
     Ok(())
 }

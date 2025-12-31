@@ -114,7 +114,7 @@ impl StatusReporter for ConsoleReporter {
         let mut files_with_issues = 0;
 
         // Count total patterns including global "all" patterns
-        for (file_path, patterns) in &config.files {
+        for patterns in config.files.values() {
             total_patterns += patterns.len();
         }
 

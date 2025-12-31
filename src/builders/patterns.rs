@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
-use std::fmt;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use uuid::Uuid;
 
 /// An enum that defines the different types of patterns supported by the engine.
@@ -148,11 +148,12 @@ impl IgnorePattern {
                 // Try to validate as regex first, but if it fails, treat it as a literal word pattern
                 if self.specification.starts_with('/') && self.specification.ends_with('/') {
                     // It's a regex pattern enclosed in slashes
-                    let regex_pattern = &self.specification[1..self.specification.len()-1];
+                    let regex_pattern = &self.specification[1..self.specification.len() - 1];
                     Regex::new(regex_pattern).context("Invalid regex pattern")?;
                 } else {
                     // It's a word/identifier pattern - create word boundary regex to validate
-                    let word_boundary_pattern = format!(r"\b{}\b", regex::escape(&self.specification));
+                    let word_boundary_pattern =
+                        format!(r"\b{}\b", regex::escape(&self.specification));
                     Regex::new(&word_boundary_pattern).context("Invalid word pattern")?;
                 }
             }
@@ -193,19 +194,17 @@ impl IgnorePattern {
     /// This method handles two cases:
     /// 1. If the specification is enclosed in slashes (`/pattern/`), it's treated as a raw regex.
     /// 2. Otherwise, it's treated as a word/identifier that should match with word boundaries.
+    ///
     /// This approach ensures a user can define simple word matches without needing to
     /// know regex syntax.
     fn create_line_regex_pattern(&self) -> String {
         if self.specification.starts_with('/') && self.specification.ends_with('/') {
             // Extract raw regex pattern from between the slashes
-            self.specification[1..self.specification.len()-1].to_string()
+            self.specification[1..self.specification.len() - 1].to_string()
         } else {
             // Create hardcoded assignment detection pattern that handles various contexts
             let var_name = regex::escape(&self.specification);
-            format!(
-                r#"\b{}\s*=\s*(?:"[^"]+"|'[^']+')"#,
-                var_name
-            )
+            format!(r#"\b{}\s*=\s*(?:"[^"]+"|'[^']+')"#, var_name)
         }
     }
 }
@@ -294,8 +293,8 @@ impl PatternMatcher for IgnorePattern {
                 // Look for end pattern
                 let mut found_end = false;
                 // Start a nested loop to search for the end pattern from the next line.
-                for j in i + 1..lines.len() {
-                    if lines[j].contains(end_pattern) {
+                for (j, line) in lines.iter().enumerate().skip(i + 1) {
+                    if line.contains(end_pattern) {
                         // println!("DEBUG: Found end pattern at line {}: '{}'", j + 1, lines[j]);
                         let end_line = j + 1; // Convert to 1-based line number
                         ranges.push((start_line, end_line));

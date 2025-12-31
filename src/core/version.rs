@@ -64,7 +64,7 @@ fn get_latest_github_release() -> Result<String, Box<dyn Error>> {
 fn normalize_version(version: &str) -> String {
     version
         .trim()
-        .trim_start_matches(|c| c == 'v' || c == 'V')
+        .trim_start_matches(['v', 'V'])
         .chars()
         .filter(|c| c.is_ascii())
         .collect::<String>()
@@ -79,29 +79,30 @@ pub fn run() {
     match get_local_version() {
         Ok(local_version) => {
             // Always print local version
-            println!(
-                "├─ Local version: {}",
-                local_version.bright_yellow().bold()
-            );
+            println!("├─ Local version: {}", local_version.bright_yellow().bold());
 
             // Try to get the latest version from GitHub
             match get_latest_github_release() {
                 Ok(latest_version) => {
-                    println!("├─ Latest GitHub release: {}", latest_version.bright_green().bold());
+                    println!(
+                        "├─ Latest GitHub release: {}",
+                        latest_version.bright_green().bold()
+                    );
 
                     let norm_local = normalize_version(&local_version);
                     let norm_latest = normalize_version(&latest_version);
 
                     if norm_local != norm_latest {
                         println!(
-                            "{}",
-                            format!(
-                                "└─ Update available! (Local: {}, Latest: {})",
-                                local_version.red(), latest_version.bright_green()
-                            )
+                            "└─ Update available! (Local: {}, Latest: {})",
+                            local_version.red(),
+                            latest_version.bright_green()
                         );
                     } else {
-                        println!("{}", "└─ You are running the latest version.".green().bold());
+                        println!(
+                            "{}",
+                            "└─ You are running the latest version.".green().bold()
+                        );
                     }
                 }
                 Err(_) => {
@@ -119,9 +120,10 @@ pub fn run() {
         Err(e) => {
             println!(
                 "{}",
-                format!("Could not determine local version: {}", e).red().bold()
+                format!("Could not determine local version: {}", e)
+                    .red()
+                    .bold()
             );
         }
     }
 }
-
