@@ -82,22 +82,24 @@ impl Default for SelectiveIgnoreConfig {
 pub struct ConfigManager {
     /// The full path to the configuration file (`.git/selective-ignore.toml`)
     config_path: PathBuf,
+    /// The full path to the global configuration file (`~/.git-selective-ignore.toml`)
+    global_config_path: Option<PathBuf>,
     /// The root directory of the Git repository.
     repo_root: PathBuf,
 }
 
 impl ConfigManager {
     /// Creates a new `ConfigManager` instance.
-    ///
-    /// This is the entry point for accessing the configuration. It first
-    /// locates the root of the Git repository and then determines the path
-    /// for the configuration file.
     pub fn new() -> Result<Self> {
         let repo_root = find_git_root()?;
         let config_path = repo_root.join(".git").join("selective-ignore.toml");
 
+        // Determine global config path
+        let global_config_path = get_global_config_path();
+
         Ok(Self {
             config_path,
+            global_config_path,
             repo_root,
         })
     }
@@ -259,24 +261,104 @@ pub trait ConfigProvider {
 }
 
 /// Implementation of the `ConfigProvider` trait for `ConfigManager`.
+
 ///
+
 /// This section provides the concrete implementations of the trait methods,
+
 /// which handle the actual file I/O operations.
+
 impl ConfigProvider for ConfigManager {
+
+
+
     /// Loads the configuration from the file. If the file doesn't exist, it returns
+
     /// a default configuration instead of an error.
+
+    ///
+
+    /// It also loads the global configuration if it exists and merges it with the local one.
+
     fn load_config(&self) -> Result<SelectiveIgnoreConfig> {
-        if !self.config_path.exists() {
-            return Ok(SelectiveIgnoreConfig::default());
+
+        let mut final_config = SelectiveIgnoreConfig::default();
+
+
+
+        // 1. Load global config first (lower priority for patterns)
+
+        if let Some(global_path) = &self.global_config_path {
+
+            if global_path.exists() {
+
+                let content = fs::read_to_string(global_path).context("Failed to read global config file")?;
+
+                let global_config: SelectiveIgnoreConfig = toml::from_str(&content).context("Failed to parse global config file")?;
+
+                
+
+                // Merge global settings
+
+                final_config.global_settings = global_config.global_settings;
+
+                
+
+                // Merge patterns
+
+                for (file, patterns) in global_config.files {
+
+                    final_config.files.insert(file, patterns);
+
+                }
+
+            }
+
         }
 
-        let content =
-            fs::read_to_string(&self.config_path).context("Failed to read config file")?;
 
-        toml::from_str(&content).context("Failed to parse config file")
+
+        // 2. Load local config (higher priority)
+
+        if self.config_path.exists() {
+
+            let content = fs::read_to_string(&self.config_path).context("Failed to read local config file")?;
+
+            let local_config: SelectiveIgnoreConfig = toml::from_str(&content).context("Failed to parse local config file")?;
+
+            
+
+            // Merge global settings (local wins)
+
+            final_config.global_settings = local_config.global_settings;
+
+            
+
+            // Merge patterns (local wins for specific files)
+
+            for (file, patterns) in local_config.files {
+
+                final_config.files.insert(file, patterns);
+
+            }
+
+            
+
+            final_config.version = local_config.version;
+
+        }
+
+
+
+        Ok(final_config)
+
     }
 
+
+
     /// Saves the provided configuration struct to the file.
+
+
     fn save_config(&self, config: &SelectiveIgnoreConfig) -> Result<()> {
         let content = toml::to_string_pretty(config).context("Failed to serialize config")?;
 
@@ -308,4 +390,15 @@ fn find_git_root() -> Result<PathBuf> {
             None => anyhow::bail!("Not in a Git repository"),
         }
     }
+}
+
+/// A private helper function to determine the path to the global configuration file.
+fn get_global_config_path() -> Option<PathBuf> {
+    let home = if cfg!(windows) {
+        std::env::var("USERPROFILE").ok()
+    } else {
+        std::env::var("HOME").ok()
+    };
+
+    home.map(|h| PathBuf::from(h).join(".git-selective-ignore.toml"))
 }
