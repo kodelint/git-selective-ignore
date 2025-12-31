@@ -13,7 +13,10 @@ pub fn initialize_repository() -> Result<()> {
     let config_manager = ConfigManager::new()?;
     // Call the initialize method to create the config file.
     config_manager.initialize()?;
+    // Also initialize the global config if it doesn't exist.
+    config_manager.initialize_global()?;
     println!("✓ Initialized selective ignore for this repository");
+    println!("✓ Initialized global configuration");
     println!("Run 'git-selective-ignore install-hooks' to enable automatic processing");
     Ok(())
 }
@@ -67,9 +70,9 @@ pub fn list_patterns() -> Result<()> {
 /// This function is intended to be called by the `pre-commit` Git hook. It
 /// initializes the `IgnoreEngine`, which then finds staged files, applies
 /// to ignore patterns, backs up the original content, and re-stages the cleaned content.
-pub fn process_pre_commit() -> Result<()> {
+pub fn process_pre_commit(dry_run: bool) -> Result<()> {
     let mut engine = get_engine()?;
-    engine.process_pre_commit()?;
+    engine.process_pre_commit(dry_run)?;
     Ok(())
 }
 
@@ -78,10 +81,41 @@ pub fn process_pre_commit() -> Result<()> {
 /// This function is intended to be called by the `post-commit` Git hook. It
 /// initializes the `IgnoreEngine`, which then restores the original file content
 /// from the temporary backups created during the pre-commit phase.
-pub fn process_post_commit() -> Result<()> {
+pub fn process_post_commit(dry_run: bool) -> Result<()> {
     let mut engine = get_engine()?;
-    engine.process_post_commit()?;
+    engine.process_post_commit(dry_run)?;
     Ok(())
+}
+
+/// Starts an interactive wizard to add a new ignore pattern.
+pub fn add_wizard() -> Result<()> {
+    use dialoguer::{Input, Select};
+
+    println!("🧙‍♂️ Welcome to the Selective Ignore Wizard!");
+
+    let file_path: String = Input::new()
+        .with_prompt("Which file do you want to add patterns to? (use 'all' for global)")
+        .interact_text()?;
+
+    let types = vec![
+        "line-regex",
+        "line-number",
+        "line-range",
+        "block-start-end",
+    ];
+    let selection = Select::new()
+        .with_prompt("What type of pattern would you like to use?")
+        .items(&types)
+        .default(0)
+        .interact()?;
+
+    let pattern_type = types[selection].to_string();
+
+    let pattern: String = Input::new()
+        .with_prompt("Enter the pattern specification")
+        .interact_text()?;
+
+    add_ignore_pattern(file_path, pattern_type, pattern)
 }
 
 /// Installs the necessary Git hooks (`pre-commit` and `post-commit`) into the
@@ -89,9 +123,9 @@ pub fn process_post_commit() -> Result<()> {
 ///
 /// This enables the selective ignore functionality to run automatically on every
 /// commit, without manual intervention.
-pub fn install_hooks() -> Result<()> {
+pub fn install_hooks(strict: bool) -> Result<()> {
     let config_manager = get_config_manager()?;
-    hooks::install_git_hooks(config_manager.get_repo_root())?;
+    hooks::install_git_hooks(config_manager.get_repo_root(), strict)?;
     println!("✓ Installed Git hooks for automatic processing");
     Ok(())
 }
