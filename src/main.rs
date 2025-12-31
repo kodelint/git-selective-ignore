@@ -50,12 +50,12 @@ enum Commands {
     Add {
         /// The path to the file to which the pattern should be applied, relative
         /// to the repository root.
-        file_path: String,
+        file_path: Option<String>,
         /// The type of pattern to use, such as `line-regex`, `line-number`, etc.
-        #[arg(short, long, default_value = "line-regex")]
-        pattern_type: String,
+        #[arg(short, long)]
+        pattern_type: Option<String>,
         /// The specific pattern string (e.g., a regex, a line number, or a block marker).
-        pattern: String,
+        pattern: Option<String>,
     },
 
     /// Removes an existing ignore pattern from a file's configuration.
@@ -77,7 +77,11 @@ enum Commands {
     /// Processes files before a commit is made. This is intended for use by a Git hook.
     ///
     /// This command is invoked by the `pre-commit` Git hook to clean staged files.
-    PreCommit,
+    PreCommit {
+        /// If true, simulate the process without modifying any files.
+        #[arg(short, long)]
+        dry_run: bool,
+    },
 
     /// Restores files after a commit has been completed. This is intended for use by a Git hook.
     ///
@@ -169,7 +173,7 @@ fn main() -> Result<()> {
             pattern_id,
         } => remove_ignore_pattern(file_path, pattern_id),
         Commands::List => list_patterns(),
-        Commands::PreCommit => process_pre_commit(),
+        Commands::PreCommit { dry_run } => process_pre_commit(dry_run),
         Commands::PostCommit => process_post_commit(),
         Commands::InstallHooks => install_hooks(),
         Commands::UninstallHooks => uninstall_hooks(),

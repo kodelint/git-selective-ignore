@@ -1,7 +1,8 @@
-use crate::builders::hooks;
 use crate::core::config::ConfigManager;
-use crate::core::engine::IgnoreEngine;
 use anyhow::Result;
+use colored::Colorize;
+use crate::builders::hooks;
+use crate::core::engine::IgnoreEngine;
 
 /// Initializes the selective ignore configuration for a new repository.
 ///
@@ -24,11 +25,75 @@ pub fn initialize_repository() -> Result<()> {
 /// and the pattern specification string. It updates the configuration file
 /// to include the new pattern.
 ///
-/// # Arguments
-/// * `file_path`: The path to the file to which the pattern should be applied.
-/// * `pattern_type`: A string representing the type of pattern (e.g., "line-regex").
-/// * `pattern`: The actual pattern string (e.g., a regular expression).
-pub fn add_ignore_pattern(file_path: String, pattern_type: String, pattern: String) -> Result<()> {
+/// If arguments are missing, it enters an interactive wizard mode.
+pub fn add_ignore_pattern(
+    file_path: Option<String>,
+    pattern_type: Option<String>,
+    pattern: Option<String>,
+) -> Result<()> {
+    let mut file_path = file_path;
+    let mut pattern_type = pattern_type;
+    let mut pattern = pattern;
+
+    // Interactive Wizard if any argument is missing
+    if file_path.is_none() || pattern_type.is_none() || pattern.is_none() {
+        println!("{}", "🧙‍♂️ Welcome to the Selective Ignore Pattern Wizard!".magenta().bold());
+        println!("{}", "--------------------------------------------------".magenta());
+
+        if file_path.is_none() {
+            println!("{}", "📁 Enter file path (relative to repo root)".cyan());
+            println!("{}", "   (Use 'all' to apply to EVERY file in the repo)".dimmed());
+            print!("   > ");
+            use std::io::Write;
+            std::io::stdout().flush()?;
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+            file_path = Some(input.trim().to_string());
+        }
+
+        if pattern_type.is_none() {
+            println!("\n{}", "🔍 Select pattern type:".cyan());
+            println!("   1. {} (default) - Match individual lines with regex", "line-regex".yellow());
+            println!("   2. {} - Match a specific line number", "line-number".yellow());
+            println!("   3. {} - Match a range of lines (e.g., 10-20)", "line-range".yellow());
+            println!("   4. {} - Match a block (e.g., START ||| END)", "block-start-end".yellow());
+            print!("   Select [1-4]: ");
+            use std::io::Write;
+            std::io::stdout().flush()?;
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+            pattern_type = Some(match input.trim() {
+                "2" => "line-number".to_string(),
+                "3" => "line-range".to_string(),
+                "4" => "block-start-end".to_string(),
+                _ => "line-regex".to_string(),
+            });
+        }
+
+        if pattern.is_none() {
+            println!("\n{}", "📝 Enter the pattern specification:".cyan());
+            match pattern_type.as_deref() {
+                Some("line-regex") => println!("{}", "   (e.g., /SECRET_TOKEN/ or just SECRET_TOKEN)".dimmed()),
+                Some("line-number") => println!("{}", "   (e.g., 42)".dimmed()),
+                Some("line-range") => println!("{}", "   (e.g., 10-15)".dimmed()),
+                Some("block-start-end") => println!("{}", "   (e.g., BEGIN_DEBUG ||| END_DEBUG)".dimmed()),
+                _ => {}
+            }
+            print!("   > ");
+            use std::io::Write;
+            std::io::stdout().flush()?;
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+            pattern = Some(input.trim().to_string());
+        }
+        println!();
+    }
+
+
+    let file_path = file_path.unwrap();
+    let pattern_type = pattern_type.unwrap();
+    let pattern = pattern.unwrap();
+
     // Get a ConfigManager instance using a helper function.
     let mut config_manager = get_config_manager()?;
     // Call the ConfigManager's method to add the new pattern.
@@ -67,9 +132,9 @@ pub fn list_patterns() -> Result<()> {
 /// This function is intended to be called by the `pre-commit` Git hook. It
 /// initializes the `IgnoreEngine`, which then finds staged files, applies
 /// to ignore patterns, backs up the original content, and re-stages the cleaned content.
-pub fn process_pre_commit() -> Result<()> {
+pub fn process_pre_commit(dry_run: bool) -> Result<()> {
     let mut engine = get_engine()?;
-    engine.process_pre_commit()?;
+    engine.process_pre_commit(dry_run)?;
     Ok(())
 }
 

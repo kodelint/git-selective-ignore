@@ -47,20 +47,18 @@ impl IgnoreEngine {
     }
 
     /// The main entry point for the `pre-commit` Git hook.
-    pub fn process_pre_commit(&mut self) -> Result<()> {
+    pub fn process_pre_commit(&mut self, dry_run: bool) -> Result<()> {
         let config = self.config_manager.load_config()?;
         let funny = config.global_settings.funny_mode;
 
+        if dry_run {
+            println!("{}", "🔍 Dry run enabled: No files will be modified.".cyan().bold());
+        }
+
         if funny {
-            println!(
-                "{}",
-                "🧙‍♂️  Abra Kadabra! Vanishing unwanted lines...".magenta()
-            );
+            println!("{}", "🧙‍♂️  Abra Kadabra! Vanishing unwanted lines...".magenta());
         } else {
-            println!(
-                "{}",
-                "📝 Processing files with selective ignore patterns...".yellow()
-            );
+            println!("{}", "📝 Processing files with selective ignore patterns...".yellow());
         }
 
         let staged_files = self.git_client.get_staged_files()?;
@@ -93,25 +91,28 @@ impl IgnoreEngine {
                     self.process_file_content(&original_content, &all_patterns, &file_path_str)?;
 
                 if cleaned_content != original_content {
-                    let backup_data = BackupData {
-                        original_content: original_content.to_string(),
-                        ignored_lines,
-                        original_file_hash: calculate_hash(&original_content),
-                        cleaned_file_hash: calculate_hash(&cleaned_content),
-                    };
-                    self.storage.store_backup(&file_path_str, backup_data)?;
+                    if !dry_run {
+                        let backup_data = BackupData {
+                            original_content: original_content.to_string(),
+                            ignored_lines,
+                            original_file_hash: calculate_hash(&original_content),
+                            cleaned_file_hash: calculate_hash(&cleaned_content),
+                        };
+                        self.storage.store_backup(&file_path_str, backup_data)?;
 
-                    // Write the cleaned content to the working directory.
-                    self.git_client
-                        .write_working_file(file_path, &cleaned_content)?;
+                        // Write the cleaned content to the working directory.
+                        self.git_client.write_working_file(file_path, &cleaned_content)?;
 
-                    // Mark the file to be re-staged.
-                    files_to_add_after_processing.push(file_path.clone());
+                        // Mark the file to be re-staged.
+                        files_to_add_after_processing.push(file_path.clone());
+                    } else {
+                        println!("   ✨ [Dry Run] Would remove {} line(s)", ignored_lines.len());
+                    }
                 }
             }
         }
 
-        if !files_to_add_after_processing.is_empty() {
+        if !dry_run && !files_to_add_after_processing.is_empty() {
             println!("\n🔄 Re-staging modified files...");
             for path in files_to_add_after_processing {
                 self.git_client.stage_file(&path)?;
@@ -119,9 +120,9 @@ impl IgnoreEngine {
         }
 
         if funny {
-            println!("✨ Mischief managed.");
+             println!("✨ Mischief managed.");
         } else {
-            println!("✅ Pre-commit processing complete.");
+             println!("✅ Pre-commit processing complete.");
         }
         Ok(())
     }
