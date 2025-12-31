@@ -64,27 +64,40 @@ git-selective-ignore install-hooks
 
 ### 4. Add Ignore Patterns
 
-Add patterns to tell the tool what to ignore.
+Add patterns to tell the tool what to ignore. You can use the `add` command directly or use the interactive wizard.
 
-**Ignore by Regex (Global):**
-Ignore lines containing `API_KEY` in all files.
+**Using the Wizard:**
+```bash
+git-selective-ignore add-wizard
+```
+
+**Manual Addition:**
+... (rest of the add patterns section) ...
 ```bash
 git-selective-ignore add all API_KEY --pattern-type line-regex
 ```
 
-**Ignore by Block (Global):**
-Ignore blocks starting with `// DEBUG BLOCK START` and ending with `// DEBUG BLOCK END`.
+### 5. Dry Run Mode
+
+If you want to see what would happen during a commit without actually modifying any files, use the `--dry-run` flag with `pre-commit` or `post-commit`.
+
 ```bash
-git-selective-ignore add all "// DEBUG BLOCK START ||| // DEBUG BLOCK END" --pattern-type block-start-end
+git-selective-ignore pre-commit --dry-run
 ```
 
-**Ignore by Line Range (Specific File):**
-Ignore lines 13-14 in `src/main.rs`.
+### 6. Strict Verification
+
+For extra safety, you can install the "Strict" version of the pre-commit hook. This hook will fail the commit if it detects any ignored content in the staging area, instead of automatically cleaning it.
+
 ```bash
-git-selective-ignore add src/main.rs 13-14 --pattern-type line-range
+git-selective-ignore install-hooks --strict
 ```
 
-### 5. Verify Configuration
+### 7. Global Configuration
+
+Patterns that you want to apply to *all* your repositories can be added to the global configuration file at `~/.config/git-selective-ignore/config.toml`. The tool will automatically merge these patterns with your local repository settings.
+
+### 8. Verify Configuration
 
 List the installed patterns to verify they are correct.
 

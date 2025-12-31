@@ -32,6 +32,10 @@ this automatically, so the workflow stays seamless.
 
 - **Pattern-Based Ignoring:** Ignore by regex, line numbers, or block start/end markers.
 - **Automatic Processing:** Installs `pre-commit` and `post-commit` hooks to strip and restore files.
+- **Dry Run Mode:** Preview changes without modifying files using the `--dry-run` flag.
+- **Interactive Wizard:** Easily add patterns using an interactive CLI guide.
+- **Global Configuration:** Define patterns that apply across all your repositories in `~/.config/git-selective-ignore/config.toml`.
+- **Strict Verification:** Fail commits if ignored content is detected using the `--strict` hook option.
 - **Flexible Configuration:** Stores settings in `.git/selective-ignore.toml` with per-file and global rules.
 - **Import Existing Patterns:** Import patterns from existing `.gitignore` files to easily transition your setup.
 - **Backup Strategies:** Choose between in-memory or temporary file backups to suit your needs.
