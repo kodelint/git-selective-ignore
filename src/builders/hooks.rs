@@ -38,6 +38,23 @@ fi
 git-selective-ignore post-commit
 "#;
 
+const STRICT_PRE_COMMIT_HOOK: &str = r#"#!/bin/sh
+# Git Selective Ignore - Strict Pre-commit Hook
+
+# Check if git-selective-ignore is available
+if ! command -v git-selective-ignore > /dev/null 2>&1; then
+    echo "Warning: git-selective-ignore not found in PATH"
+    exit 0
+fi
+
+# Verify no ignored content is staged. Fail commit if found.
+git-selective-ignore verify
+if [ $? -ne 0 ]; then
+    echo "Error: Ignored content detected in staging area. Commit aborted."
+    exit 1
+fi
+"#;
+
 /// A constant string containing the content for the post-merge hook script.
 /// This is a placeholder for a future feature to handle merge conflicts
 /// and pattern updates. It is currently not used.
@@ -75,7 +92,8 @@ git-selective-ignore verify
 ///
 /// # Arguments
 /// * `repo_root`: The `Path` to the root directory of the Git repository.
-pub fn install_git_hooks(repo_root: &Path) -> Result<()> {
+/// * `strict`: If true, installs the strict pre-commit hook that fails if ignored content is found.
+pub fn install_git_hooks(repo_root: &Path, strict: bool) -> Result<()> {
     // Construct the path to the Git hooks directory.
     let hooks_dir = repo_root.join(".git").join("hooks");
 
@@ -88,7 +106,11 @@ pub fn install_git_hooks(repo_root: &Path) -> Result<()> {
     fs::create_dir_all(&hooks_dir)?;
 
     // Install the pre-commit, post-commit, post-merge and pre-push hooks.
-    install_hook(&hooks_dir, "pre-commit", PRE_COMMIT_HOOK)?;
+    if strict {
+        install_hook(&hooks_dir, "pre-commit", STRICT_PRE_COMMIT_HOOK)?;
+    } else {
+        install_hook(&hooks_dir, "pre-commit", PRE_COMMIT_HOOK)?;
+    }
     install_hook(&hooks_dir, "post-commit", POST_COMMIT_HOOK)?;
     install_hook(&hooks_dir, "post-merge", POST_MERGE_HOOK)?;
     install_hook(&hooks_dir, "pre-push", PRE_PUSH_HOOK)?;
