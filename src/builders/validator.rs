@@ -76,20 +76,17 @@ impl StandardValidator {
         let mut line_numbers = HashSet::new();
 
         for pattern in patterns {
-            match pattern.pattern_type {
-                patterns::PatternType::LineNumber => {
-                    if let Ok(line_num) = pattern.specification.parse::<usize>() {
-                        // Check if a pattern for this line number has already been seen.
-                        if line_numbers.contains(&line_num) {
-                            warnings.push(format!(
-                                "Duplicate line number pattern for line {}",
-                                line_num
-                            ));
-                        }
-                        line_numbers.insert(line_num);
-                    }
+            if let patterns::PatternType::LineNumber = pattern.pattern_type
+                && let Ok(line_num) = pattern.specification.parse::<usize>()
+            {
+                // Check if a pattern for this line number has already been seen.
+                if line_numbers.contains(&line_num) {
+                    warnings.push(format!(
+                        "Duplicate line number pattern for line {}",
+                        line_num
+                    ));
                 }
-                _ => {} // Other pattern types don't have this type of conflict yet.
+                line_numbers.insert(line_num);
             }
         }
         warnings
@@ -160,10 +157,10 @@ impl ConfigValidator for StandardValidator {
                 }
             }
             patterns::PatternType::LineNumber => {
-                if let Ok(line_num) = pattern.specification.parse::<usize>() {
-                    if line_num == 0 {
-                        issues.push("Line numbers start from 1, not 0".to_string());
-                    }
+                if let Ok(line_num) = pattern.specification.parse::<usize>()
+                    && line_num == 0
+                {
+                    issues.push("Line numbers start from 1, not 0".to_string());
                 }
             }
             _ => {} // No specific semantic checks for other pattern types yet.

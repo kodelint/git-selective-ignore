@@ -31,7 +31,6 @@ pub struct BackupData {
 /// This abstraction allows the application to use different storage mechanisms
 /// (e.g., in-memory or on-disk) without changing the core `IgnoreEngine` logic.
 pub trait StorageProvider {
-
     /// Stores the provided `BackupData` for a given file.
     ///
     /// # Arguments
@@ -133,11 +132,11 @@ impl TempFileStorage {
 
 /// Implementation of the `StorageProvider` trait for `TempFileStorage`.
 impl StorageProvider for TempFileStorage {
-
     /// Stores the `BackupData` by serializing it to JSON and writing it to a file.
     fn store_backup(&mut self, file_path: &str, backup_data: BackupData) -> Result<()> {
         let backup_path = self.get_backup_path(file_path);
-        let serialized = serde_json::to_string_pretty(&backup_data).context("Failed to serialize backup data")?;
+        let serialized = serde_json::to_string_pretty(&backup_data)
+            .context("Failed to serialize backup data")?;
         fs::write(&backup_path, serialized).context("Failed to write backup file")?;
         Ok(())
     }
@@ -149,7 +148,8 @@ impl StorageProvider for TempFileStorage {
 
         if backup_path.exists() {
             let content = fs::read_to_string(&backup_path).context("Failed to read backup file")?;
-            let backup_data: BackupData = serde_json::from_str(&content).context("Failed to deserialize backup data")?;
+            let backup_data: BackupData =
+                serde_json::from_str(&content).context("Failed to deserialize backup data")?;
 
             // Clean up the backup file after restoring it
             fs::remove_file(&backup_path).context("Failed to remove backup file after restore")?;
@@ -166,7 +166,8 @@ impl StorageProvider for TempFileStorage {
         let mut keys = Vec::new();
 
         if self.temp_dir.exists() {
-            let entries = fs::read_dir(&self.temp_dir).context("Failed to read backup directory")?;
+            let entries =
+                fs::read_dir(&self.temp_dir).context("Failed to read backup directory")?;
             // Read all the entries (files and directories) in the temporary backup directory.
             // The `?` operator handles any potential I/O errors and returns early.
             for entry in entries {
@@ -187,7 +188,8 @@ impl StorageProvider for TempFileStorage {
     /// Cleans up the entire temporary backup directory.
     fn cleanup(&mut self) -> Result<()> {
         if self.temp_dir.exists() {
-            fs::remove_dir_all(&self.temp_dir).context("Failed to remove temp directory during cleanup")?;
+            fs::remove_dir_all(&self.temp_dir)
+                .context("Failed to remove temp directory during cleanup")?;
         }
         Ok(())
     }
@@ -213,7 +215,6 @@ impl MemoryStorage {
 }
 
 impl StorageProvider for MemoryStorage {
-
     /// Implementation of the `StorageProvider` trait for `MemoryStorage`.
     fn store_backup(&mut self, file_path: &str, backup_data: BackupData) -> Result<()> {
         self.backups.insert(file_path.to_string(), backup_data);

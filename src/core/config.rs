@@ -1,11 +1,11 @@
+use crate::builders::importer::{FileImporter, PatternImporter};
+use crate::builders::patterns::IgnorePattern;
+use crate::builders::validator::{ConfigValidator, StandardValidator};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use crate::builders::importer::{FileImporter, PatternImporter};
-use crate::builders::patterns::IgnorePattern;
-use crate::builders::validator::{ConfigValidator, StandardValidator};
 
 /// `GlobalSettings` holds application-wide configuration options.
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -17,6 +17,9 @@ pub struct GlobalSettings {
     pub auto_cleanup: bool,
     /// A flag to enable verbose logging for more detailed output.
     pub verbose: bool,
+    /// A flag to enable humorous output messages.
+    #[serde(default)]
+    pub funny_mode: bool,
 }
 
 /// An enum defining the different backup strategies.
@@ -65,6 +68,8 @@ impl Default for SelectiveIgnoreConfig {
                 auto_cleanup: true,
                 // `verbose` is disabled by default for cleaner output.
                 verbose: false,
+                // `funny_mode` is disabled by default.
+                funny_mode: false,
             },
         }
     }
@@ -227,7 +232,7 @@ impl ConfigManager {
                 serde_json::to_string_pretty(&config).context("Failed to serialize to JSON")?
             }
             "yaml" => serde_yaml::to_string(&config).context("Failed to serialize to YAML")?,
-            "toml" | _ => toml::to_string_pretty(&config).context("Failed to serialize to TOML")?,
+            _ => toml::to_string_pretty(&config).context("Failed to serialize to TOML")?,
         };
 
         std::fs::write(file_path, content).context("Failed to write export file")?;
@@ -251,8 +256,6 @@ pub trait ConfigProvider {
     fn load_config(&self) -> Result<SelectiveIgnoreConfig>;
     /// Saves the provided configuration to the provider's source.
     fn save_config(&self, config: &SelectiveIgnoreConfig) -> Result<()>;
-    /// Returns the path to the configuration file.
-    fn get_config_path(&self) -> Result<PathBuf>;
 }
 
 /// Implementation of the `ConfigProvider` trait for `ConfigManager`.
@@ -260,7 +263,6 @@ pub trait ConfigProvider {
 /// This section provides the concrete implementations of the trait methods,
 /// which handle the actual file I/O operations.
 impl ConfigProvider for ConfigManager {
-
     /// Loads the configuration from the file. If the file doesn't exist, it returns
     /// a default configuration instead of an error.
     fn load_config(&self) -> Result<SelectiveIgnoreConfig> {
@@ -281,11 +283,6 @@ impl ConfigProvider for ConfigManager {
         fs::write(&self.config_path, content).context("Failed to write config file")?;
 
         Ok(())
-    }
-
-    /// Returns a clone of the configuration path.
-    fn get_config_path(&self) -> Result<PathBuf> {
-        Ok(self.config_path.clone())
     }
 }
 
