@@ -6,6 +6,10 @@ use clap::{Parser, Subcommand};
 mod builders;
 mod core;
 mod utils;
+
+#[cfg(test)]
+mod tests;
+
 use crate::core::{config::ConfigManager, version::run};
 // Import all public functions from the `utils` module. These functions
 // are the core logic handlers for each command-line action.
@@ -77,19 +81,34 @@ enum Commands {
     /// Processes files before a commit is made. This is intended for use by a Git hook.
     ///
     /// This command is invoked by the `pre-commit` Git hook to clean staged files.
-    PreCommit,
+    PreCommit {
+        /// If true, no changes will be written to the disk.
+        #[arg(short, long)]
+        dry_run: bool,
+    },
 
     /// Restores files after a commit has been completed. This is intended for use by a Git hook.
     ///
     /// This command is invoked by the `post-commit` Git hook to restore the original
     /// file content that was backed up during the `pre-commit` stage.
-    PostCommit,
+    PostCommit {
+        /// If true, no changes will be written to the disk.
+        #[arg(short, long)]
+        dry_run: bool,
+    },
+
+    /// Starts an interactive wizard to add a new ignore pattern.
+    AddWizard,
 
     /// Installs the `pre-commit` and `post-commit` Git hooks.
     ///
     /// This command sets up the necessary shell scripts in the `.git/hooks` directory
     /// to automate the selective ignore process on every commit.
-    InstallHooks,
+    InstallHooks {
+        /// If true, installs a strict pre-commit hook that fails if ignored content is detected.
+        #[arg(short, long)]
+        strict: bool,
+    },
 
     /// Uninstalls the previously installed Git hooks.
     ///
@@ -148,7 +167,7 @@ fn main() -> Result<()> {
     // are often run before a valid configuration exists.
     if !matches!(
         cli.command,
-        Commands::Init | Commands::InstallHooks | Commands::Version
+        Commands::Init | Commands::InstallHooks { .. } | Commands::Version
     ) {
         let config_manager = ConfigManager::new()?;
         config_manager.validate_config()?;
@@ -169,9 +188,10 @@ fn main() -> Result<()> {
             pattern_id,
         } => remove_ignore_pattern(file_path, pattern_id),
         Commands::List => list_patterns(),
-        Commands::PreCommit => process_pre_commit(),
-        Commands::PostCommit => process_post_commit(),
-        Commands::InstallHooks => install_hooks(),
+        Commands::PreCommit { dry_run } => process_pre_commit(dry_run),
+        Commands::PostCommit { dry_run } => process_post_commit(dry_run),
+        Commands::AddWizard => utils::add_wizard(),
+        Commands::InstallHooks { strict } => install_hooks(strict),
         Commands::UninstallHooks => uninstall_hooks(),
         Commands::Status => show_status(),
         Commands::Verify => verify_staging_area(),

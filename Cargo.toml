@@ -49,6 +49,8 @@ toml = "0.9.5"
 # `uuid` is a library for generating and parsing Universally Unique Identifiers (UUIDs).
 # It is used to generate unique IDs for each ignore pattern.
 uuid = { version = "1.18.0", features = ["v4", "serde"] }
+dialoguer = "0.11.0"
+dirs = "5.0.1"
 
 # =================================================================================
 # [dev-dependencies] Section
@@ -56,3 +58,4 @@ uuid = { version = "1.18.0", features = ["v4", "serde"] }
 # This section is for dependencies that are only used during development,
 # such as for writing tests or benchmarks.
 [dev-dependencies]
+tempfile = "3.10.1"

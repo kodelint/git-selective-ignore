@@ -82,6 +82,8 @@ impl Default for SelectiveIgnoreConfig {
 pub struct ConfigManager {
     /// The full path to the configuration file (`.git/selective-ignore.toml`)
     config_path: PathBuf,
+    /// The full path to the global configuration file (`~/.config/git-selective-ignore/config.toml`)
+    global_config_path: PathBuf,
     /// The root directory of the Git repository.
     repo_root: PathBuf,
 }
@@ -94,17 +96,36 @@ impl ConfigManager {
     /// for the configuration file.
     pub fn new() -> Result<Self> {
         let repo_root = find_git_root()?;
+        Self::new_with_root(repo_root)
+    }
+
+    /// Creates a new `ConfigManager` instance with an explicit repository root.
+    ///
+    /// This is particularly useful for testing or when the current working
+    /// directory is not within the repository.
+    pub fn new_with_root(repo_root: PathBuf) -> Result<Self> {
         let config_path = repo_root.join(".git").join("selective-ignore.toml");
+
+        let global_config_path = dirs::home_dir()
+            .context("Failed to determine home directory for global configuration")?
+            .join(".config")
+            .join("git-selective-ignore")
+            .join("config.toml");
 
         Ok(Self {
             config_path,
+            global_config_path,
             repo_root,
         })
     }
 
+    /// Overrides the global configuration path. Primarily used for testing.
+    #[cfg(test)]
+    pub fn set_global_config_path(&mut self, path: PathBuf) {
+        self.global_config_path = path;
+    }
+
     /// Initializes a new configuration file with default settings if one does not already exist.
-    ///
-    /// This is the main function called by the `init` command.
     pub fn initialize(&self) -> Result<()> {
         if self.config_path.exists() {
             return Ok(());
@@ -112,6 +133,24 @@ impl ConfigManager {
 
         let default_config = SelectiveIgnoreConfig::default();
         self.save_config(&default_config)?;
+        Ok(())
+    }
+
+    /// Initializes the global configuration file.
+    pub fn initialize_global(&self) -> Result<()> {
+        if self.global_config_path.exists() {
+            return Ok(());
+        }
+
+        if let Some(parent) = self.global_config_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let default_config = SelectiveIgnoreConfig::default();
+        let content =
+            toml::to_string_pretty(&default_config).context("Failed to serialize global config")?;
+        fs::write(&self.global_config_path, content)
+            .context("Failed to write global config file")?;
         Ok(())
     }
 
@@ -266,14 +305,39 @@ impl ConfigProvider for ConfigManager {
     /// Loads the configuration from the file. If the file doesn't exist, it returns
     /// a default configuration instead of an error.
     fn load_config(&self) -> Result<SelectiveIgnoreConfig> {
-        if !self.config_path.exists() {
-            return Ok(SelectiveIgnoreConfig::default());
+        let mut final_config = SelectiveIgnoreConfig::default();
+
+        // 1. Load Global Config if it exists
+        if self.global_config_path.exists() {
+            let content = fs::read_to_string(&self.global_config_path)
+                .context("Failed to read global config file")?;
+            let global_config: SelectiveIgnoreConfig =
+                toml::from_str(&content).context("Failed to parse global config file")?;
+
+            final_config.global_settings = global_config.global_settings;
+            // Merge global files patterns
+            for (file, patterns) in global_config.files {
+                final_config.files.entry(file).or_default().extend(patterns);
+            }
         }
 
-        let content =
-            fs::read_to_string(&self.config_path).context("Failed to read config file")?;
+        // 2. Load Local Config if it exists
+        if self.config_path.exists() {
+            let content = fs::read_to_string(&self.config_path)
+                .context("Failed to read local config file")?;
+            let local_config: SelectiveIgnoreConfig =
+                toml::from_str(&content).context("Failed to parse local config file")?;
 
-        toml::from_str(&content).context("Failed to parse config file")
+            // Local settings override global settings
+            final_config.global_settings = local_config.global_settings;
+
+            // Merge local files patterns
+            for (file, patterns) in local_config.files {
+                final_config.files.entry(file).or_default().extend(patterns);
+            }
+        }
+
+        Ok(final_config)
     }
 
     /// Saves the provided configuration struct to the file.

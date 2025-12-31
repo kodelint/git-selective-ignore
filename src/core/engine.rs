@@ -47,9 +47,16 @@ impl IgnoreEngine {
     }
 
     /// The main entry point for the `pre-commit` Git hook.
-    pub fn process_pre_commit(&mut self) -> Result<()> {
+    pub fn process_pre_commit(&mut self, dry_run: bool) -> Result<()> {
         let config = self.config_manager.load_config()?;
         let funny = config.global_settings.funny_mode;
+
+        if dry_run {
+            println!(
+                "{}",
+                "🔍 DRY RUN: No changes will be persisted.".cyan().bold()
+            );
+        }
 
         if funny {
             println!(
@@ -93,25 +100,32 @@ impl IgnoreEngine {
                     self.process_file_content(&original_content, &all_patterns, &file_path_str)?;
 
                 if cleaned_content != original_content {
-                    let backup_data = BackupData {
-                        original_content: original_content.to_string(),
-                        ignored_lines,
-                        original_file_hash: calculate_hash(&original_content),
-                        cleaned_file_hash: calculate_hash(&cleaned_content),
-                    };
-                    self.storage.store_backup(&file_path_str, backup_data)?;
+                    if !dry_run {
+                        let backup_data = BackupData {
+                            original_content: original_content.to_string(),
+                            ignored_lines,
+                            original_file_hash: calculate_hash(&original_content),
+                            cleaned_file_hash: calculate_hash(&cleaned_content),
+                        };
+                        self.storage.store_backup(&file_path_str, backup_data)?;
 
-                    // Write the cleaned content to the working directory.
-                    self.git_client
-                        .write_working_file(file_path, &cleaned_content)?;
+                        // Write the cleaned content to the working directory.
+                        self.git_client
+                            .write_working_file(file_path, &cleaned_content)?;
 
-                    // Mark the file to be re-staged.
-                    files_to_add_after_processing.push(file_path.clone());
+                        // Mark the file to be re-staged.
+                        files_to_add_after_processing.push(file_path.clone());
+                    } else {
+                        println!(
+                            "   └─ {} Would modify and re-stage this file",
+                            "DRY RUN:".cyan()
+                        );
+                    }
                 }
             }
         }
 
-        if !files_to_add_after_processing.is_empty() {
+        if !files_to_add_after_processing.is_empty() && !dry_run {
             println!("\n🔄 Re-staging modified files...");
             for path in files_to_add_after_processing {
                 self.git_client.stage_file(&path)?;
@@ -127,9 +141,16 @@ impl IgnoreEngine {
     }
 
     /// The main entry point for the `post-commit` Git hook.
-    pub fn process_post_commit(&mut self) -> Result<()> {
+    pub fn process_post_commit(&mut self, dry_run: bool) -> Result<()> {
         let config = self.config_manager.load_config()?;
         let funny = config.global_settings.funny_mode;
+
+        if dry_run {
+            println!(
+                "{}",
+                "🔍 DRY RUN: No changes will be persisted.".cyan().bold()
+            );
+        }
 
         if funny {
             println!("🧟  It's alive! Bringing lines back from the dead...");
@@ -149,9 +170,13 @@ impl IgnoreEngine {
                 if self.git_client.file_exists(path) {
                     let current_content = self.git_client.read_working_file(path)?;
                     if calculate_hash(&current_content) == backup_data.cleaned_file_hash {
-                        self.git_client
-                            .write_working_file(path, &backup_data.original_content)?;
-                        println!("✓ Restored {file_path}");
+                        if !dry_run {
+                            self.git_client
+                                .write_working_file(path, &backup_data.original_content)?;
+                            println!("✓ Restored {file_path}");
+                        } else {
+                            println!("   └─ {} Would restore {file_path}", "DRY RUN:".cyan());
+                        }
                     } else {
                         println!(
                             "⚠️ Skipping restore for {file_path} - file was modified after pre-commit"
@@ -180,9 +205,13 @@ impl IgnoreEngine {
                     {
                         let current_content = self.git_client.read_working_file(path)?;
                         if calculate_hash(&current_content) == backup_data.cleaned_file_hash {
-                            self.git_client
-                                .write_working_file(path, &backup_data.original_content)?;
-                            println!("✓ Restored {backup_key}");
+                            if !dry_run {
+                                self.git_client
+                                    .write_working_file(path, &backup_data.original_content)?;
+                                println!("✓ Restored {backup_key}");
+                            } else {
+                                println!("   └─ {} Would restore {backup_key}", "DRY RUN:".cyan());
+                            }
                         } else {
                             println!(
                                 "⚠️ Skipping restore for {backup_key} - file was modified after pre-commit"
@@ -193,7 +222,7 @@ impl IgnoreEngine {
             }
         }
 
-        if config.global_settings.auto_cleanup {
+        if config.global_settings.auto_cleanup && !dry_run {
             self.storage.cleanup()?;
         }
 
