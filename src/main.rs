@@ -180,6 +180,9 @@ fn main() -> Result<()> {
             import_type,
         } => import_patterns(file_path, import_type),
         Commands::Export { file_path, format } => export_patterns(file_path, format),
-        Commands::Version => Ok(run()),
+        Commands::Version => {
+            run();
+            Ok(())
+        }
     }
 }
