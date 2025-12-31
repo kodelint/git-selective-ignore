@@ -1,11 +1,11 @@
-use crate::builders::importer::{FileImporter, PatternImporter};
-use crate::builders::patterns::IgnorePattern;
-use crate::builders::validator::{ConfigValidator, StandardValidator};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use crate::builders::importer::{FileImporter, PatternImporter};
+use crate::builders::patterns::IgnorePattern;
+use crate::builders::validator::{ConfigValidator, StandardValidator};
 
 /// `GlobalSettings` holds application-wide configuration options.
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -109,7 +109,7 @@ impl ConfigManager {
     /// This is the main function called by the `init` command.
     pub fn initialize(&self) -> Result<()> {
         if self.config_path.exists() {
-            return Ok(());
+            return Ok(())
         }
 
         let default_config = SelectiveIgnoreConfig::default();
@@ -187,7 +187,7 @@ impl ConfigManager {
 
         if config.files.is_empty() {
             println!("No ignore patterns configured.");
-            return Ok(());
+            return Ok(())
         }
 
         for (file_path, patterns) in &config.files {
@@ -261,104 +261,57 @@ pub trait ConfigProvider {
 }
 
 /// Implementation of the `ConfigProvider` trait for `ConfigManager`.
-
 ///
-
 /// This section provides the concrete implementations of the trait methods,
-
 /// which handle the actual file I/O operations.
-
 impl ConfigProvider for ConfigManager {
-
-
-
     /// Loads the configuration from the file. If the file doesn't exist, it returns
-
     /// a default configuration instead of an error.
-
     ///
-
     /// It also loads the global configuration if it exists and merges it with the local one.
-
     fn load_config(&self) -> Result<SelectiveIgnoreConfig> {
-
         let mut final_config = SelectiveIgnoreConfig::default();
 
-
-
         // 1. Load global config first (lower priority for patterns)
+        if let Some(global_path) = &self.global_config_path
+            && global_path.exists()
+        {
+            let content =
+                fs::read_to_string(global_path).context("Failed to read global config file")?;
+            let global_config: SelectiveIgnoreConfig =
+                toml::from_str(&content).context("Failed to parse global config file")?;
 
-        if let Some(global_path) = &self.global_config_path {
+            // Merge global settings
+            final_config.global_settings = global_config.global_settings;
 
-            if global_path.exists() {
-
-                let content = fs::read_to_string(global_path).context("Failed to read global config file")?;
-
-                let global_config: SelectiveIgnoreConfig = toml::from_str(&content).context("Failed to parse global config file")?;
-
-                
-
-                // Merge global settings
-
-                final_config.global_settings = global_config.global_settings;
-
-                
-
-                // Merge patterns
-
-                for (file, patterns) in global_config.files {
-
-                    final_config.files.insert(file, patterns);
-
-                }
-
+            // Merge patterns
+            for (file, patterns) in global_config.files {
+                final_config.files.insert(file, patterns);
             }
-
         }
-
-
 
         // 2. Load local config (higher priority)
-
         if self.config_path.exists() {
-
-            let content = fs::read_to_string(&self.config_path).context("Failed to read local config file")?;
-
-            let local_config: SelectiveIgnoreConfig = toml::from_str(&content).context("Failed to parse local config file")?;
-
-            
+            let content =
+                fs::read_to_string(&self.config_path).context("Failed to read local config file")?;
+            let local_config: SelectiveIgnoreConfig =
+                toml::from_str(&content).context("Failed to parse local config file")?;
 
             // Merge global settings (local wins)
-
             final_config.global_settings = local_config.global_settings;
 
-            
-
             // Merge patterns (local wins for specific files)
-
             for (file, patterns) in local_config.files {
-
                 final_config.files.insert(file, patterns);
-
             }
 
-            
-
             final_config.version = local_config.version;
-
         }
 
-
-
         Ok(final_config)
-
     }
 
-
-
     /// Saves the provided configuration struct to the file.
-
-
     fn save_config(&self, config: &SelectiveIgnoreConfig) -> Result<()> {
         let content = toml::to_string_pretty(config).context("Failed to serialize config")?;
 

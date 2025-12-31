@@ -52,13 +52,24 @@ impl IgnoreEngine {
         let funny = config.global_settings.funny_mode;
 
         if dry_run {
-            println!("{}", "🔍 Dry run enabled: No files will be modified.".cyan().bold());
+            println!(
+                "{}",
+                "🔍 Dry run enabled: No files will be modified."
+                    .cyan()
+                    .bold()
+            );
         }
 
         if funny {
-            println!("{}", "🧙‍♂️  Abra Kadabra! Vanishing unwanted lines...".magenta());
+            println!(
+                "{}",
+                "🧙‍♂️  Abra Kadabra! Vanishing unwanted lines...".magenta()
+            );
         } else {
-            println!("{}", "📝 Processing files with selective ignore patterns...".yellow());
+            println!(
+                "{}",
+                "📝 Processing files with selective ignore patterns...".yellow()
+            );
         }
 
         let staged_files = self.git_client.get_staged_files()?;
@@ -101,12 +112,16 @@ impl IgnoreEngine {
                         self.storage.store_backup(&file_path_str, backup_data)?;
 
                         // Write the cleaned content to the working directory.
-                        self.git_client.write_working_file(file_path, &cleaned_content)?;
+                        self.git_client
+                            .write_working_file(file_path, &cleaned_content)?;
 
                         // Mark the file to be re-staged.
                         files_to_add_after_processing.push(file_path.clone());
                     } else {
-                        println!("   ✨ [Dry Run] Would remove {} line(s)", ignored_lines.len());
+                        println!(
+                            "   ✨ [Dry Run] Would remove {} line(s)",
+                            ignored_lines.len()
+                        );
                     }
                 }
             }
@@ -120,9 +135,9 @@ impl IgnoreEngine {
         }
 
         if funny {
-             println!("✨ Mischief managed.");
+            println!("✨ Mischief managed.");
         } else {
-             println!("✅ Pre-commit processing complete.");
+            println!("✅ Pre-commit processing complete.");
         }
         Ok(())
     }
