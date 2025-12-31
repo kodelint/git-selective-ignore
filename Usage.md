@@ -92,7 +92,7 @@ List the installed patterns to verify they are correct.
 git-selective-ignore list
 ```
 
-### 6. Check Status
+#### 6. Check Status
 
 Run `status` to see which lines will be ignored before you commit.
 
@@ -102,32 +102,31 @@ git-selective-ignore status
 
 Output should indicate that your patterns are matching the lines in `src/main.rs`.
 
-### 7. Commit and Verify
-
-Stage your files:
-```bash
-git add .
-```
-
-Commit your changes. The `pre-commit` hook will automatically remove the ignored lines, and the `post-commit` hook will restore them to your working directory.
-
-```bash
-git commit -m "Initial commit with selective ignore"
-```
-
-**Verify Git History:**
-Check the commit content. The ignored lines (API key, debug block, etc.) should be missing.
-```bash
-git show HEAD
-```
-
-**Verify Working Directory:**
-Check your local file. The ignored lines should still be there!
-```bash
-cat src/main.rs
-```
+---
 
 ### 8. Advanced Usage
+
+#### Dry Run Mode
+You can simulate the pre-commit process without actually modifying any files in your working directory. This is useful for verifying exactly what *would* happen during a commit.
+
+```bash
+git-selective-ignore pre-commit --dry-run
+```
+
+#### Interactive Pattern Wizard
+If you run the `add` command without arguments, the tool will guide you through the process of creating a new pattern.
+
+```bash
+git-selective-ignore add
+```
+
+#### Global Configuration
+You can define patterns that apply to **all** your Git repositories. Create a file at `~/.git-selective-ignore.toml` (or `%USERPROFILE%\.git-selective-ignore.toml` on Windows).
+
+Local repository configurations in `.git/selective-ignore.toml` will be merged with this global configuration, with local settings taking precedence.
+
+#### Strict Verification Hook
+When you run `install-hooks`, the tool also installs a `pre-push` hook. This hook runs `git-selective-ignore verify`, which strictly prevents you from pushing if any ignored patterns are detected in your staged files. This acts as a final safety net.
 
 #### Funny Mode
 Enable "Funny Mode" for entertaining commit messages!
@@ -135,16 +134,4 @@ Edit `.git/selective-ignore.toml`:
 ```toml
 [global_settings]
 funny_mode = true
-```
-
-#### Importing from .gitignore
-You can import patterns from an existing `.gitignore` file.
-```bash
-git-selective-ignore import .gitignore --import-type gitignore
-```
-
-#### Exporting Configuration
-Share your patterns with your team by exporting them.
-```bash
-git-selective-ignore export my-config.toml --format toml
 ```
