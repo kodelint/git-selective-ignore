@@ -72,12 +72,52 @@ git-selective-ignore add-wizard
 ```
 
 **Manual Addition:**
-... (rest of the add patterns section) ...
-```bash
-git-selective-ignore add all API_KEY --pattern-type line-regex
-```
+
+
+
+- **Using** `line-regex` **(default):**
+
+  - Ignore lines that match a specific regular expression.
+
+    ```bash
+
+    # Ignore all lines in `src/main.rs` containing the word `println`
+
+    git-selective-ignore add src/main.rs ".*println.*" --pattern-type line-regex
+
+    ```
+
+- **Using** `line-number`:
+
+  - Ignore a specific line number.
+
+    ```bash
+
+    # Ignore line 15 in `src/config.rs`
+
+    git-selective-ignore add src/config.rs 15 --pattern-type line-number
+
+    ```
+
+- **Using** `block-start-end`:
+
+  - Ignore a block of code defined by a start and end regex.
+
+    The `|||` separator is used to delimit the start and end patterns.
+
+    ```bash
+
+    # Ignore a debug block in `src/lib.rs`
+
+    git-selective-ignore add src/lib.rs "//# DEBUG START ||| //# DEBUG END" --pattern-type block-start-end
+
+    ```
+
+
 
 ### 5. Dry Run Mode
+
+
 
 If you want to see what would happen during a commit without actually modifying any files, use the `--dry-run` flag with `pre-commit` or `post-commit`.
 

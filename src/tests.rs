@@ -95,12 +95,10 @@ mod tests {
 
     #[test]
     fn test_global_config_merge() {
-        let (_dir, _repo, repo_path) = setup_test_repo();
+        let (_dir, repo, repo_path) = setup_test_repo();
         std::env::set_current_dir(&repo_path).unwrap();
 
-        let _config_manager = ConfigManager::new().unwrap();
-
-        // Create a dummy global config
+        // 1. Create a dummy global config
         let global_config_dir = repo_path.join("global_config");
         fs::create_dir_all(&global_config_dir).unwrap();
         let global_config_path = global_config_dir.join("config.toml");
@@ -109,14 +107,38 @@ mod tests {
         global_config.files.insert(
             "all".to_string(),
             vec![
-                IgnorePattern::new("line-regex".to_string(), "/GLOBAL IGNORE/".to_string())
-                    .unwrap(),
+                IgnorePattern::new("line-regex".to_string(), "/GLOBAL/".to_string()).unwrap(),
             ],
         );
 
         let content = toml::to_string_pretty(&global_config).unwrap();
         fs::write(&global_config_path, content).unwrap();
 
-        let _cm = ConfigManager::new().unwrap();
+        // 2. Setup local repo with a file and local pattern
+        let test_file = "test.txt";
+        let file_path = repo_path.join(test_file);
+        fs::write(&file_path, "line1\nGLOBAL\nLOCAL\n").unwrap();
+
+        let mut index = repo.index().unwrap();
+        index.add_path(std::path::Path::new(test_file)).unwrap();
+        index.write().unwrap();
+
+        let mut config_manager = ConfigManager::new().unwrap();
+        config_manager.set_global_config_path(global_config_path);
+        config_manager.initialize().unwrap();
+        config_manager
+            .add_pattern(
+                test_file.to_string(),
+                "line-regex".to_string(),
+                "/LOCAL/".to_string(),
+            )
+            .unwrap();
+
+        // 3. Run engine and verify both global and local patterns applied
+        let mut engine = IgnoreEngine::new(config_manager).unwrap();
+        engine.process_pre_commit(false).unwrap();
+
+        let final_content = fs::read_to_string(&file_path).unwrap();
+        assert_eq!(final_content, "line1\n");
     }
 }

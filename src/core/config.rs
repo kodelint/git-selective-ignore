@@ -98,20 +98,23 @@ impl ConfigManager {
         let repo_root = find_git_root()?;
         let config_path = repo_root.join(".git").join("selective-ignore.toml");
 
-        let global_config_path = if let Some(home) = dirs::home_dir() {
-            home.join(".config")
-                .join("git-selective-ignore")
-                .join("config.toml")
-        } else {
-            // Fallback if home dir cannot be determined
-            PathBuf::from("/tmp/git-selective-ignore-global.toml")
-        };
+        let global_config_path = dirs::home_dir()
+            .context("Failed to determine home directory for global configuration")?
+            .join(".config")
+            .join("git-selective-ignore")
+            .join("config.toml");
 
         Ok(Self {
             config_path,
             global_config_path,
             repo_root,
         })
+    }
+
+    /// Overrides the global configuration path. Primarily used for testing.
+    #[cfg(test)]
+    pub fn set_global_config_path(&mut self, path: PathBuf) {
+        self.global_config_path = path;
     }
 
     /// Initializes a new configuration file with default settings if one does not already exist.
