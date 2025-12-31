@@ -2,6 +2,8 @@
 
 ![Rust Logo](https://img.shields.io/badge/Rust-red?style=for-the-badge&logo=rust)
 ![Platform](https://img.shields.io/badge/Platform-macOS-blue?style=for-the-badge&logo=apple)
+![Platform](https://img.shields.io/badge/Platform-Linux-blue?style=for-the-badge&logo=linux)
+![Platform](https://img.shields.io/badge/Platform-Windows-blue?style=for-the-badge&logo=windows)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/kodelint/git-selective-ignore/actions/workflows/workflow.yml/badge.svg)](https://github.com/kodelint/git-selective-ignore/actions/workflows/workflow.yml)
@@ -9,6 +11,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/kodelint/git-selective-ignore.svg)](https://github.com/kodelint/git-selective-ignore/stargazers)
 [![Last commit](https://img.shields.io/github/last-commit/kodelint/git-selective-ignore.svg)](https://github.com/kodelint/git-selective-ignore/commits/main)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/kodelint/git-selective-ignore/pulls)
+[![git-cliff](https://img.shields.io/badge/%F0%9F%9A%80-git--cliff-ff69b4.svg)](https://github.com/orhun/git-cliff)
 
 <p align="center">
   <img src="https://github.com/kodelint/blog-images/blob/main/common/01-git-selecting-ignore.png" alt="git-selective-ignore" width="500"/>
@@ -32,6 +35,7 @@ this automatically, so the workflow stays seamless.
 - **Flexible Configuration:** Stores settings in `.git/selective-ignore.toml` with per-file and global rules.
 - **Import Existing Patterns:** Import patterns from existing `.gitignore` files to easily transition your setup.
 - **Backup Strategies:** Choose between in-memory or temporary file backups to suit your needs.
+- **Funny Mode:** Add a touch of humor to your development workflow with entertaining messages.
 
 ---
 
@@ -110,7 +114,7 @@ You can add patterns using the `add` command. The tool supports multiple pattern
     # Ignore a debug block in `src/lib.rs`
     git-selective-ignore add src/lib.rs "//# DEBUG START ||| //# DEBUG END" --pattern-type block-start-end
     ```
-  - If you or your team follow a specfic pattern
+  - If you or your team follow a specific pattern
     ```bash
     # Ignore a debug block in `src/lib.rs`
     git-selective-ignore add all "//# DEBUG START ||| //# DEBUG END" --pattern-type block-start-end
@@ -129,8 +133,6 @@ git-selective-ignore list
 Use the `status` command to see which files have ignored content and how many lines would be removed in a commit. However, keep in mind that `status` can be
 an expensive command depending on the size of the repository.
 Presently, it looks at all files for the ignore pattern under `all` section.
-
-(_maybe in future I will move it to only look at the staged files, due to **scope of responsibility**_)
 
 ```bash
 git-selective-ignore status
@@ -151,57 +153,22 @@ All settings live in `.git/selective-ignore.toml` file.
 ```toml
 version = "1.0"
 
+[global_settings]
+backup_strategy = "TempFile"
+auto_cleanup = true
+verbose = false
+funny_mode = false # Enable for humorous output messages
+
 [[files.all]]
 id = "78ed02f4-db7c-4921-b565-5e8986f19705"
 pattern_type = "LineRegex"
 specification = "API_KEY"
 compiled_regex = "API_KEY"
 
-[[files.all]]
-id = "7fb165d1-bab6-4c79-a13b-51f2f29a88e9"
-pattern_type = "LineRegex"
-specification = "APP_KEY"
-compiled_regex = "APP_KEY"
-
-[[files.all]]
-id = "02b17597-bb85-428c-be56-3d0cd4a3c44b"
-pattern_type = "LineRegex"
-specification = "GITHUB_TOKEN"
-compiled_regex = "GITHUB_TOKEN"
-
-[[files.all]]
-id = "76447f06-dd03-4c3b-b27a-b611579e9cb8"
-pattern_type = "BlockStartEnd"
-specification = "// DEBUG BLOCK START ||| // DEBUG BLOCK END"
-compiled_regex = "// DEBUG BLOCK START ||| // DEBUG BLOCK END"
-
-[[files.all]]
-id = "48f984d1-dd90-4984-99d6-ae6c63c591d6"
-pattern_type = "LineRegex"
-specification = "SECRET"
-compiled_regex = "SECRET"
-
-[[files.all]]
-id = "b9a54bc2-048d-4fa0-b6ff-dc66aff6e706"
-pattern_type = "LineRegex"
-specification = "password"
-compiled_regex = "password"
-
 [[files."src/main.rs"]]
 id = "31ca2ff0-90d8-47ea-90db-413cedf09bcf"
 pattern_type = "LineRange"
 specification = "13-16"
-
-[[files."src/main.rs"]]
-id = "a941d428-87ed-4378-898d-d5156723dfd0"
-pattern_type = "BlockStartEnd"
-specification = "/* TEMP_CODE_START */ ||| /* TEMP_CODE_END */"
-compiled_regex = "/* TEMP_CODE_START */ ||| /* TEMP_CODE_END */"
-
-[global_settings]
-backup_strategy = "TempFile"
-auto_cleanup = true
-verbose = false
 ```
 
 You can manually edit this file to configure your patterns and global settings.
@@ -213,4 +180,7 @@ You can manually edit this file to configure your patterns and global settings.
 Contributions! are welcome, feel free to open an issue or submit a pull request on GitHub.
 
 - **Issues:** Report bugs or suggest new features.
+
 - **Pull Requests:** Fork the repository and submit your changes.
+
+- **Changelog:** Use `make changelog` to generate the `CHANGELOG.md` file using `git-cliff`.
