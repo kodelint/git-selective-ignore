@@ -74,7 +74,7 @@ impl PatternImporter for FileImporter {
             // The custom format already contains file paths, so we can directly
             // parse the content and return the result. The `_` arm
             // acts as a default for any unrecognized type.
-            "custom" | _ => self.parse_custom_format(&content),
+            _ => self.parse_custom_format(&content),
         }
     }
 }
