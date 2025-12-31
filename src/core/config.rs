@@ -136,8 +136,10 @@ impl ConfigManager {
         }
 
         let default_config = SelectiveIgnoreConfig::default();
-        let content = toml::to_string_pretty(&default_config).context("Failed to serialize global config")?;
-        fs::write(&self.global_config_path, content).context("Failed to write global config file")?;
+        let content =
+            toml::to_string_pretty(&default_config).context("Failed to serialize global config")?;
+        fs::write(&self.global_config_path, content)
+            .context("Failed to write global config file")?;
         Ok(())
     }
 
@@ -298,9 +300,9 @@ impl ConfigProvider for ConfigManager {
         if self.global_config_path.exists() {
             let content = fs::read_to_string(&self.global_config_path)
                 .context("Failed to read global config file")?;
-            let global_config: SelectiveIgnoreConfig = toml::from_str(&content)
-                .context("Failed to parse global config file")?;
-            
+            let global_config: SelectiveIgnoreConfig =
+                toml::from_str(&content).context("Failed to parse global config file")?;
+
             final_config.global_settings = global_config.global_settings;
             // Merge global files patterns
             for (file, patterns) in global_config.files {
@@ -312,8 +314,8 @@ impl ConfigProvider for ConfigManager {
         if self.config_path.exists() {
             let content = fs::read_to_string(&self.config_path)
                 .context("Failed to read local config file")?;
-            let local_config: SelectiveIgnoreConfig = toml::from_str(&content)
-                .context("Failed to parse local config file")?;
+            let local_config: SelectiveIgnoreConfig =
+                toml::from_str(&content).context("Failed to parse local config file")?;
 
             // Local settings override global settings
             final_config.global_settings = local_config.global_settings;

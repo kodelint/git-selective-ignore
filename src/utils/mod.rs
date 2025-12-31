@@ -97,12 +97,7 @@ pub fn add_wizard() -> Result<()> {
         .with_prompt("Which file do you want to add patterns to? (use 'all' for global)")
         .interact_text()?;
 
-    let types = vec![
-        "line-regex",
-        "line-number",
-        "line-range",
-        "block-start-end",
-    ];
+    let types = vec!["line-regex", "line-number", "line-range", "block-start-end"];
     let selection = Select::new()
         .with_prompt("What type of pattern would you like to use?")
         .items(&types)

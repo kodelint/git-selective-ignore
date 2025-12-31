@@ -1,12 +1,12 @@
 #[cfg(test)]
 mod tests {
+    use crate::builders::patterns::IgnorePattern;
     use crate::core::config::{ConfigManager, SelectiveIgnoreConfig};
     use crate::core::engine::IgnoreEngine;
-    use crate::builders::patterns::IgnorePattern;
+    use git2::Repository;
     use std::fs;
     use std::path::PathBuf;
     use tempfile::tempdir;
-    use git2::Repository;
 
     fn setup_test_repo() -> (tempfile::TempDir, Repository, PathBuf) {
         let dir = tempdir().unwrap();
@@ -42,10 +42,16 @@ mod tests {
 
         let mut config_manager = ConfigManager::new().unwrap();
         config_manager.initialize().unwrap();
-        config_manager.add_pattern(test_file.to_string(), "line-regex".to_string(), "/IGNORE ME/".to_string()).unwrap();
+        config_manager
+            .add_pattern(
+                test_file.to_string(),
+                "line-regex".to_string(),
+                "/IGNORE ME/".to_string(),
+            )
+            .unwrap();
 
         let mut engine = IgnoreEngine::new(config_manager).unwrap();
-        
+
         // Dry run
         engine.process_pre_commit(true).unwrap();
 
@@ -69,10 +75,16 @@ mod tests {
 
         let mut config_manager = ConfigManager::new().unwrap();
         config_manager.initialize().unwrap();
-        config_manager.add_pattern(test_file.to_string(), "line-regex".to_string(), "/IGNORE ME/".to_string()).unwrap();
+        config_manager
+            .add_pattern(
+                test_file.to_string(),
+                "line-regex".to_string(),
+                "/IGNORE ME/".to_string(),
+            )
+            .unwrap();
 
         let mut engine = IgnoreEngine::new(config_manager).unwrap();
-        
+
         // Actual run
         engine.process_pre_commit(false).unwrap();
 
@@ -87,17 +99,21 @@ mod tests {
         std::env::set_current_dir(&repo_path).unwrap();
 
         let _config_manager = ConfigManager::new().unwrap();
-        
+
         // Create a dummy global config
         let global_config_dir = repo_path.join("global_config");
         fs::create_dir_all(&global_config_dir).unwrap();
         let global_config_path = global_config_dir.join("config.toml");
-        
+
         let mut global_config = SelectiveIgnoreConfig::default();
-        global_config.files.insert("all".to_string(), vec![
-            IgnorePattern::new("line-regex".to_string(), "/GLOBAL IGNORE/".to_string()).unwrap()
-        ]);
-        
+        global_config.files.insert(
+            "all".to_string(),
+            vec![
+                IgnorePattern::new("line-regex".to_string(), "/GLOBAL IGNORE/".to_string())
+                    .unwrap(),
+            ],
+        );
+
         let content = toml::to_string_pretty(&global_config).unwrap();
         fs::write(&global_config_path, content).unwrap();
 

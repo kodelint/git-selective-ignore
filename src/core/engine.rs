@@ -52,7 +52,10 @@ impl IgnoreEngine {
         let funny = config.global_settings.funny_mode;
 
         if dry_run {
-            println!("{}", "🔍 DRY RUN: No changes will be persisted.".cyan().bold());
+            println!(
+                "{}",
+                "🔍 DRY RUN: No changes will be persisted.".cyan().bold()
+            );
         }
 
         if funny {
@@ -113,7 +116,10 @@ impl IgnoreEngine {
                         // Mark the file to be re-staged.
                         files_to_add_after_processing.push(file_path.clone());
                     } else {
-                        println!("   └─ {} Would modify and re-stage this file", "DRY RUN:".cyan());
+                        println!(
+                            "   └─ {} Would modify and re-stage this file",
+                            "DRY RUN:".cyan()
+                        );
                     }
                 }
             }
@@ -140,7 +146,10 @@ impl IgnoreEngine {
         let funny = config.global_settings.funny_mode;
 
         if dry_run {
-            println!("{}", "🔍 DRY RUN: No changes will be persisted.".cyan().bold());
+            println!(
+                "{}",
+                "🔍 DRY RUN: No changes will be persisted.".cyan().bold()
+            );
         }
 
         if funny {
