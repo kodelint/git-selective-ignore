@@ -96,6 +96,14 @@ impl ConfigManager {
     /// for the configuration file.
     pub fn new() -> Result<Self> {
         let repo_root = find_git_root()?;
+        Self::new_with_root(repo_root)
+    }
+
+    /// Creates a new `ConfigManager` instance with an explicit repository root.
+    ///
+    /// This is particularly useful for testing or when the current working
+    /// directory is not within the repository.
+    pub fn new_with_root(repo_root: PathBuf) -> Result<Self> {
         let config_path = repo_root.join(".git").join("selective-ignore.toml");
 
         let global_config_path = dirs::home_dir()

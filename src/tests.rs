@@ -18,9 +18,8 @@ mod tests {
     #[test]
     fn test_initialization() {
         let (_dir, _repo, repo_path) = setup_test_repo();
-        std::env::set_current_dir(&repo_path).unwrap();
 
-        let config_manager = ConfigManager::new().unwrap();
+        let config_manager = ConfigManager::new_with_root(repo_path.clone()).unwrap();
         config_manager.initialize().unwrap();
 
         let config_file = repo_path.join(".git").join("selective-ignore.toml");
@@ -30,7 +29,6 @@ mod tests {
     #[test]
     fn test_dry_run_pre_commit() {
         let (_dir, repo, repo_path) = setup_test_repo();
-        std::env::set_current_dir(&repo_path).unwrap();
 
         let test_file = "test.txt";
         let file_path = repo_path.join(test_file);
@@ -40,7 +38,7 @@ mod tests {
         index.add_path(std::path::Path::new(test_file)).unwrap();
         index.write().unwrap();
 
-        let mut config_manager = ConfigManager::new().unwrap();
+        let mut config_manager = ConfigManager::new_with_root(repo_path.clone()).unwrap();
         config_manager.initialize().unwrap();
         config_manager
             .add_pattern(
@@ -63,7 +61,6 @@ mod tests {
     #[test]
     fn test_actual_pre_commit() {
         let (_dir, repo, repo_path) = setup_test_repo();
-        std::env::set_current_dir(&repo_path).unwrap();
 
         let test_file = "test.txt";
         let file_path = repo_path.join(test_file);
@@ -73,7 +70,7 @@ mod tests {
         index.add_path(std::path::Path::new(test_file)).unwrap();
         index.write().unwrap();
 
-        let mut config_manager = ConfigManager::new().unwrap();
+        let mut config_manager = ConfigManager::new_with_root(repo_path.clone()).unwrap();
         config_manager.initialize().unwrap();
         config_manager
             .add_pattern(
@@ -96,7 +93,6 @@ mod tests {
     #[test]
     fn test_global_config_merge() {
         let (_dir, repo, repo_path) = setup_test_repo();
-        std::env::set_current_dir(&repo_path).unwrap();
 
         // 1. Create a dummy global config
         let global_config_dir = repo_path.join("global_config");
@@ -106,9 +102,7 @@ mod tests {
         let mut global_config = SelectiveIgnoreConfig::default();
         global_config.files.insert(
             "all".to_string(),
-            vec![
-                IgnorePattern::new("line-regex".to_string(), "/GLOBAL/".to_string()).unwrap(),
-            ],
+            vec![IgnorePattern::new("line-regex".to_string(), "/GLOBAL/".to_string()).unwrap()],
         );
 
         let content = toml::to_string_pretty(&global_config).unwrap();
@@ -123,7 +117,7 @@ mod tests {
         index.add_path(std::path::Path::new(test_file)).unwrap();
         index.write().unwrap();
 
-        let mut config_manager = ConfigManager::new().unwrap();
+        let mut config_manager = ConfigManager::new_with_root(repo_path.clone()).unwrap();
         config_manager.set_global_config_path(global_config_path);
         config_manager.initialize().unwrap();
         config_manager
